@@ -1,0 +1,1 @@
+// Greasemonkey/Tampermonkey script will be here
