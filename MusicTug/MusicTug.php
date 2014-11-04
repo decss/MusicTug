@@ -92,7 +92,7 @@ class MusicTug
         // Create system dirs
         $this->_createDirs('system');
 
-        dbg($this);
+        // dbg($this);
     }
 
 
@@ -165,11 +165,17 @@ class MusicTug
 
             $this->_isSaved[artwork] = $artworkPath;
         }
+        // Save lyrics
+        if ($this->_flags[lyrics][success] === true) {
+            $lyricsPath = $this->_path[lyrics];
+            $this->_saveStream($this->_stream[lyrics][lyrics], $lyricsPath, true);
 
+            $this->_isSaved[lyrics] = $lyricsPath;
+        }
 
 
         $isTrackSaved   = ($this->_isSaved[track] AND !$this->_isExist[track]);
-        $isArtworkExist = ($this->_isSaved[artwork] OR $this->_path[artwork]);
+        $isArtworkExist = ($this->_isSaved[artwork] OR $this->_isExist[artwork]);
         $isLyricsExist  = ($this->_isSaved[lyrics] OR $this->_isExist[lyrics]);
 
 
@@ -182,14 +188,6 @@ class MusicTug
             unlink($this->_isSaved[artwork]);
         }
 
-
-        // Save lyrics
-        if ($this->_flags[lyrics][success] === true) {
-            $lyricsPath = $this->_path[lyrics];
-            $this->_saveStream($this->_stream[lyrics][lyrics], $lyricsPath, true);
-
-            $this->_isSaved[lyrics] = $lyricsPath;
-        }
         // Embed lyrics
         if ($this->_config[embedLyrics] AND $isTrackSaved AND $isLyricsExist) {
             $this->_embedLyrics();
