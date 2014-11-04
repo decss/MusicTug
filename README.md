@@ -2,8 +2,7 @@ Music Tug
 ================
 PHP and JavaScript tool to download tracks hosted on music web-services (like pandora internet radio) and embed/download tags, lyrics, artworks.
 
-Frontend: Greasemonkey/Tampermonkey script which adds a user interface on the web page.
-
+Frontend: Greasemonkey/Tampermonkey script which adds a user interface on the web page.<br>
 Backend: php script which makes the magic
 
 *Currently works on www.pandora.com only*

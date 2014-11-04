@@ -14,16 +14,19 @@ class MusicTug
     private $_trackUrl   = null;
     private $_options    = array();
 
+    private $_config     = array();
+    private $_driver     = null;
+
     private $_name       = array();
     private $_url        = array();
     private $_path       = array();
-    private $_isFile     = array();
+    private $_isExist    = array();
+    private $_isSaved    = array();
     private $_stream     = array();
+    private $_flags      = array();
 
-    private $_tagsStream = array();
+    private $_tmp        = array();
 
-    private $_driver     = null;
-    private $_config     = array();
     private $_noise      = array(
         // title  => array('(Instrumental)'),
         // album  => array('(Single)', '(Explicit)', '(Radio Single)'),
@@ -46,45 +49,42 @@ class MusicTug
             throw new Exception('At least $title, $album AND $atist must be specified');
         }
 
-        $this->_name[title]     = MusicTugHelper::fixName($this->_title);
-        $this->_name[album]     = MusicTugHelper::fixName($this->_album);
-        $this->_name[artist]    = MusicTugHelper::fixName($this->_artist);
-        $this->_name[artwork]   = MusicTugHelper::fixName($this->_album);
-        $this->_url[title]      = str_replace(' ', '%20', $this->_title);
-        $this->_url[album]      = str_replace(' ', '%20', $this->_album);
-        $this->_url[artist]     = str_replace(' ', '%20', $this->_artist);
-        $this->_url[track]      = str_replace(' ', '%20', $this->_trackUrl);
-        $this->_url[artwork]    = str_replace(' ', '%20', $this->_artworkUrl);
-        $this->_path[relative]  = $this->_name[artist] . DIR_S . $this->_name[album];
-        $this->_path[absolute]  = $this->_config[downloadPath] . DIR_S . $this->_path[relative];
-        $this->_path[track]     = $this->_path[absolute] . DIR_S . $this->_name[title] . '.' . $this->_config[trackExt];
-        $this->_path[trackRel]  = $this->_path[relative] . DIR_S . $this->_name[title] . '.' . $this->_config[trackExt];
-        $this->_path[artwork]   = $this->_path[absolute] . DIR_S . $this->_name[artwork] . '.' . $this->_config[artworkExt];
-        $this->_path[lyrics]    = $this->_path[absolute] . DIR_S . 'lyrics' . DIR_S . $this->_name[title] . '.txt';
-        $this->_isFile[track]   = is_file($this->_path[track]) ? : false;
-        $this->_isFile[artwork] = is_file($this->_path[artwork]) ? : false;
-        $this->_isFile[lyrics]  = is_file($this->_path[lyrics]) ? : false;
-        $this->_saved[track]    = null;
-        $this->_saved[artwork]  = null;
-        $this->_saved[lyrics]   = null;
-        $this->_stream[track]   = array();
-        $this->_stream[artwork] = array();
-        $this->_stream[lyrics]  = array();
-        $this->_stream[tags]    = array();
+        $this->_name[title]       = MusicTugHelper::fixName($this->_title);
+        $this->_name[album]       = MusicTugHelper::fixName($this->_album);
+        $this->_name[artist]      = MusicTugHelper::fixName($this->_artist);
+        $this->_name[artwork]     = MusicTugHelper::fixName($this->_album);
+        $this->_url[track]        = str_replace(' ', '%20', $this->_trackUrl);
+        $this->_url[artwork]      = str_replace(' ', '%20', $this->_artworkUrl);
+        $this->_path[relative]    = $this->_name[artist] . DIR_S . $this->_name[album];
+        $this->_path[absolute]    = $this->_config[downloadPath] . DIR_S . $this->_path[relative];
+        $this->_path[trackRel]    = $this->_path[relative] . DIR_S . $this->_name[title] . '.' . $this->_config[trackExt];
+        $this->_path[trackAbs]    = $this->_path[absolute] . DIR_S . $this->_name[title] . '.' . $this->_config[trackExt];
+        $this->_path[artwork]     = $this->_path[absolute] . DIR_S . $this->_name[artwork] . '.' . $this->_config[artworkExt];
+        $this->_path[lyrics]      = $this->_path[absolute] . DIR_S . 'lyrics' . DIR_S . $this->_name[title] . '.txt';
+        $this->_isExist[track]    = is_file($this->_path[trackAbs]) ? : false;
+        $this->_isExist[artwork]  = is_file($this->_path[artwork]) ? : false;
+        $this->_isExist[lyrics]   = is_file($this->_path[lyrics]) ? : false;
+        $this->_isSaved[track]    = null;
+        $this->_isSaved[artwork]  = null;
+        $this->_isSaved[lyrics]   = null;
+        $this->_stream[track]     = array();
+        $this->_stream[artwork]   = array();
+        $this->_stream[lyrics]    = array();
+        $this->_stream[tags]      = array();
 
-        $this->_flags[track]    = array(
-            stream    => null,  // null, true, false  
-            success   => null,  // null, true, false
+        $this->_flags[track]      = array(
+            stream    => null,    // null, true, false  
+            success   => null,    // null, true, false
         );
-        $this->_flags[artwork]  = array(
+        $this->_flags[artwork]    = array(
             stream    => null,
             success   => null,
         );
-        $this->_flags[lyrics]   = array(
+        $this->_flags[lyrics]     = array(
             stream    => null,
             success   => null,
         );
-        $this->_flags[tags]     = array(
+        $this->_flags[tags]       = array(
             stream    => null,
             success   => null,
         );
@@ -92,13 +92,7 @@ class MusicTug
         // Create system dirs
         $this->_createDirs('system');
 
-        // dbg($this->_name, 0);
-        // dbg($this->_url, 0);
-        // dbg($this->_path, 0);
-        // dbg($this->_isFile, 0);
-        // dbg($this->_saved, 0);
-        // dbg($this->_stream);
-        // exit;
+        dbg($this);
     }
 
 
@@ -107,49 +101,33 @@ class MusicTug
         // Create media dirs
         $this->_createDirs('media');
 
-        $isTrackStream   = false;
-        $isArtworkStream = false;
-        $isTagsStream    = false;
-        $isLyricskStream = false;
-
-        if ($this->_url[track] AND $this->_isFile[track] == false) {
-            $isTrackStream   = true;
-        }
-        if ($this->_url[artwork] 
-            AND $this->_isFile[artwork] == false 
-            AND ($this->_config[embedArtwork] == true OR $this->_config[storeArtwork] == true)
-        ) {
-            $isArtworkStream = true;
-        }
-        if ($this->_config[embedTags] == true) { // TODO : Уточнить условия, когда парсить тэги ??????????????
-            $isTagsStream    = true;
-        }
-        if ($this->_isFile[lyrics] == false 
-            AND $this->_config[parseLyrics] == true
-            AND ($this->_config[embedLyrics] == true OR $this->_config[storeLyrics] == true)
-        ) {
-            $isLyricskStream = true;
-        }
-
 
         // Track stream
-        if ($isTrackStream == true) {
+        if ($this->_url[track] AND !$this->_isExist[track]) {
             $this->_stream[track] = $this->getTrackStream();
         }
+
         // Artwork stream
-        if ($isArtworkStream == true) {
+        if ($this->_url[artwork] 
+            AND !$this->_isExist[artwork]
+            AND ($this->_config[embedArtwork] OR $this->_config[storeArtwork])
+        ) {
             $this->_stream[artwork] = $this->getArtworkStream();
         }
         // Tags stream
-        if ($isTagsStream == true) {
-            if ($this->_config[parseTags] == true) {
+        if ($this->_config[embedTags]) { // TODO : Уточнить условия, когда парсить тэги !
+            if ($this->_config[parseTags]) {
                 $this->_stream[tags] = $this->getTagsStream();
             } else {
                 $this->_stream[tags] = $this->_getTagsArray();
             }
         }
+
         // Lyrics stream
-        if ($isLyricskStream == true) {
+        if (!$this->_isExist[lyrics]
+            AND $this->_config[parseLyrics]
+            AND ($this->_config[embedLyrics] OR $this->_config[storeLyrics] )
+        ) {
             $this->_stream[lyrics] = $this->getLyricsStream();
         }
         // ::: DEBUG :::
@@ -161,6 +139,7 @@ class MusicTug
         // exit;
 
 
+
         // Save track stream into file
         if ($this->_flags[track][success] === true) {
             // Write
@@ -168,13 +147,11 @@ class MusicTug
             $this->_saveStream($this->_stream[track][file], $trackPath, true);
             // Convert track
             if ($this->_config[trackExt] AND $this->_config[trackExt] != $this->_stream[track][ext]) {
-                $trackPath = $this->_convert($trackPath, $this->_path[track]);
+                $trackPath = $this->_convert($trackPath, $this->_path[trackAbs]);
             }
 
-            $this->_saved[track] = $trackPath;
+            $this->_isSaved[track] = $trackPath;
         }
-
-
         // Save artwork stream into file
         if ($this->_flags[artwork][success] === true) {
             // Write
@@ -186,19 +163,23 @@ class MusicTug
                 $artworkPath = $this->_convert($artworkPath, $this->_path[artwork]);
             }
 
-            $this->_saved[artwork] = $artworkPath;
+            $this->_isSaved[artwork] = $artworkPath;
         }
+
+
+
+        $isTrackSaved   = ($this->_isSaved[track] AND !$this->_isExist[track]);
+        $isArtworkExist = ($this->_isSaved[artwork] OR $this->_path[artwork]);
+        $isLyricsExist  = ($this->_isSaved[lyrics] OR $this->_isExist[lyrics]);
+
+
         // Embed artwork
-        if ($this->_config[embedArtwork] == true 
-            AND $this->_isFile[track] == false
-            AND $this->_saved[track] == true 
-            AND (is_file($this->_saved[artwork]) == true OR is_file($this->_path[artwork]) == true)
-        ) {
+        if ($this->_config[embedArtwork] AND $isTrackSaved AND $isArtworkExist) {
             $this->_embedArtwork();
         }
         // Store artwork. If storeArtwork = false then delete artwork file (stored above)
-        if ($this->_config[storeArtwork] == false AND $this->_saved[artwork]) {
-            unlink($this->_saved[artwork]);
+        if (!$this->_config[storeArtwork] AND $this->_isSaved[artwork]) {
+            unlink($this->_isSaved[artwork]);
         }
 
 
@@ -207,37 +188,30 @@ class MusicTug
             $lyricsPath = $this->_path[lyrics];
             $this->_saveStream($this->_stream[lyrics][lyrics], $lyricsPath, true);
 
-            $this->_saved[lyrics] = $lyricsPath;
+            $this->_isSaved[lyrics] = $lyricsPath;
         }
         // Embed lyrics
-        if ($this->_config[embedLyrics] == true
-            AND $this->_isFile[track] == false
-            AND $this->_saved[track] == true 
-            AND (is_file($this->_saved[lyrics]) == true OR $this->_isFile[lyrics] == true)
-        ) {
+        if ($this->_config[embedLyrics] AND $isTrackSaved AND $isLyricsExist) {
             $this->_embedLyrics();
         }
         // Store lyrisc. If storeLyrics = false then delete lyrics file (stored above)
-        if ($this->_config[storeLyrics] == false AND $this->_saved[lyrics]) {
-            unlink($this->_saved[lyrics]);
-            $scandir = scandir(dirname($this->_saved[lyrics]));
+        if (!$this->_config[storeLyrics] AND $this->_isSaved[lyrics]) {
+            unlink($this->_isSaved[lyrics]);
+            $scandir = scandir(dirname($this->_isSaved[lyrics]));
             if (count($scandir) == 2) {
-                rmdir(dirname($this->_saved[lyrics]));
+                rmdir(dirname($this->_isSaved[lyrics]));
             }
         }
 
 
         // Tags
-        if ($this->_config[embedTags] == true
-            AND $this->_isFile[track] == false
-            AND $this->_stream[tags][meta] != null
-        ) {
+        if ($this->_config[embedTags] AND !$this->_isExist[track] AND $this->_stream[tags][meta]) {
             $this->_embedTags();
         }
 
 
         // Playlists
-        if ($this->_config[genrePlsStore] != 0 OR $this->_config[moodPlsStore] != 0 OR $this->_config[tempoPlsStore] != 0) {
+        if ($this->_config[genrePlsStore] OR $this->_config[moodPlsStore] OR $this->_config[tempoPlsStore]) {
             $this->_storePlaylists();
         }
 
@@ -254,8 +228,8 @@ class MusicTug
     private function _embedTags()
     {
         $shell   = null;
-        $inPath  = $this->_path[track];
-        $outPath = $this->_path[track] . '.tags.' . $this->_config[trackExt];
+        $inPath  = $this->_path[trackAbs];
+        $outPath = $this->_path[trackAbs] . '.tags.' . $this->_config[trackExt];
         $meta    = MusicTugHelper::formatMeta($this->_stream[tags][meta], $this->_config[trackExt]);
         
         if ($this->_config[trackExt] == 'm4a') {
@@ -279,9 +253,9 @@ class MusicTug
      */
     private function _embedLyrics()
     {
-        if (is_file($this->_saved[lyrics]) == true) {
-            $lyricsPath = $this->_saved[lyrics];
-        } elseif ($this->_isFile[lyrics] == true) {
+        if (is_file($this->_isSaved[lyrics]) == true) {
+            $lyricsPath = $this->_isSaved[lyrics];
+        } elseif ($this->_isExist[lyrics] == true) {
             $lyricsPath = $this->_path[lyrics];
         } else {
             $lyricsPath = null;
@@ -292,8 +266,8 @@ class MusicTug
         }
 
         $shell   = null;
-        $inPath  = $this->_path[track];
-        $outPath = $this->_path[track] . '.lyrics.' . $this->_config[trackExt];
+        $inPath  = $this->_path[trackAbs];
+        $outPath = $this->_path[trackAbs] . '.lyrics.' . $this->_config[trackExt];
         
         if ($this->_config[trackExt] == 'm4a') {
             $shell = 'AtomicParsley.exe "' . $inPath . '" --lyricsFile "' . $lyricsPath . '" --output "' . $outPath . '"';
@@ -316,9 +290,9 @@ class MusicTug
      */
     private function _embedArtwork()
     {
-        if (is_file($this->_saved[artwork]) == true) {
-            $artworkPath = $this->_saved[artwork];
-        } elseif ($this->_isFile[artwork] == true) {
+        if (is_file($this->_isSaved[artwork]) == true) {
+            $artworkPath = $this->_isSaved[artwork];
+        } elseif ($this->_isExist[artwork] == true) {
             $artworkPath = $this->_path[artwork];
         } else {
             $artworkPath = null;
@@ -329,8 +303,8 @@ class MusicTug
         }
 
         $shell   = null;
-        $inPath  = $this->_path[track];
-        $outPath = $this->_path[track] . '.artwork.' . $this->_config[trackExt];
+        $inPath  = $this->_path[trackAbs];
+        $outPath = $this->_path[trackAbs] . '.artwork.' . $this->_config[trackExt];
         if ($this->_config[trackExt] == 'm4a') {
             $shell = 'AtomicParsley.exe "' . $inPath . '" --artwork "' . $artworkPath . '" --output "' . $outPath . '"';
         } else {
@@ -793,8 +767,8 @@ trait tagsStreamTrait
 
 
     /**
-     * Return $this->_tagsStream with the bigest "similarIndex"
-     * @return array One oF $this->_tagsStream[] items with best "similarIndex"
+     * Return $this->_tmp[tagsStream] with the bigest "similarIndex"
+     * @return array One oF $this->_tmp[tagsStream][] items with best "similarIndex"
      */
     function getTagsStream()
     {
@@ -802,11 +776,11 @@ trait tagsStreamTrait
         $similarIndex = null;
         $tagsStream   = array();
 
-        if ($this->_tagsStream == null) {
+        if ($this->_tmp[tagsStream] == null) {
             $this->_storeTagsStream();
         }
 
-        foreach ($this->_tagsStream as $key => $tags) {
+        foreach ($this->_tmp[tagsStream] as $key => $tags) {
             if ($tags[similarIndex] >= $similarIndex AND $tags[similarIndex] >= $this->_config[similarMin]) {
                 $streamIndex  = $key;
                 $similarIndex = $tags[similarIndex];
@@ -815,7 +789,7 @@ trait tagsStreamTrait
 
         $success = false;
         if ($streamIndex !== null) {
-            $tagsStream = $this->_tagsStream[$streamIndex];
+            $tagsStream = $this->_tmp[tagsStream][$streamIndex];
             $success    = true;
         }
 
@@ -954,7 +928,7 @@ trait tagsStreamTrait
                     meta         => $meta,
                 );
 
-                $this->_tagsStream[] = $tags;
+                $this->_tmp[tagsStream][] = $tags;
             }
         }
     }
