@@ -265,7 +265,9 @@ class MusicTugHelper
     static function getMetaComment($meta)
     {
         foreach ($meta as $key => $val) {
-            $comment .= $key . ':'.$val.'; ' . "";
+            if (stristr($key, 'TR_') OR stristr($key, 'ART_')) {
+                $comment .= $key . ':'.$val.'; ' . "";
+            }
         }
         
         return $comment;
