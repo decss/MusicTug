@@ -80,6 +80,9 @@ class MusicTug
 
     function init()
     {
+        MusicTugHelper::log();
+        MusicTugHelper::log("'$this->_title' by '$this->_artist' on '$this->_album'");
+
         // Create media dirs
         $this->_createDirs('media');
 
@@ -196,6 +199,7 @@ class MusicTug
         }
 
 
+        MusicTugHelper::log("Done!");
     }
 
 
@@ -349,6 +353,8 @@ class MusicTug
             // TODO: implement linux shell construction
         }
 
+        MusicTugHelper::log("Execute shell:  " . $execShell);
+
         if ($execShell) {
             exec($execShell);
             return true;
@@ -365,6 +371,8 @@ class MusicTug
      */
     private function _openStream($url)
     {
+        MusicTugHelper::log("Try to get file from url:  $url");
+
         $stream = array();
         $ch     = curl_init();
         curl_setopt($ch, CURLOPT_URL,            $url);
@@ -385,6 +393,10 @@ class MusicTug
             $stream[info]    = $info;
             $stream[file]    = $file;
         }
+
+        $logMsg = "{$stream[info][http_code]}(code),  {$stream[info][total_time]}(time),  "
+                . "{$stream[info][content_type]}(mime),  {$stream[info][size_download]}(size)";
+        MusicTugHelper::log($logMsg, 'result');
 
         return $stream;
     }
@@ -462,8 +474,9 @@ class MusicTug
         $title  = $this->_title;
         $artist = $this->_artist;
         $apiUrl = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&action=lyrics';
-
         $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
+
+        MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
         $xml    = simplexml_load_file($reqUrl);
 
         if ($xml->lyrics == 'Not found') {
@@ -479,13 +492,19 @@ class MusicTug
 
         // Try with tags - Title, Artist 
         if ($xml->lyrics == 'Not found' AND $title AND $artist) {
+            MusicTugHelper::log("Attempt failed", 'warning');
+            
             $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
+            MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
             $xml    = simplexml_load_file($reqUrl);
         }
 
         // Try with tags - Title, Artist, Album
         if ($xml->lyrics == 'Not found' AND $title AND $artist AND $album) {
+            MusicTugHelper::log("Attempt failed", 'warning');
+
             $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist . '&albumName=' . $album;
+            MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
             $xml    = simplexml_load_file($reqUrl);
         }
 
@@ -536,6 +555,11 @@ class MusicTug
         $lyricsStream[lyrics]     = $lyrics;
         $lyricsStream[chars]      = strlen($lyrics);
         $lyricsStream[rows]       = substr_count(str_replace("\r\n\r\n", "\r\n", trim($lyrics)), "\r\n");
+        
+        $logMsg = "{$lyricsStream[chars]}/{$lyricsStream[rows]}(length), {$lyricsStream[header]}(header),  "
+                . "{$lyricsStream[pageUrl]}(pageUrl)";
+        MusicTugHelper::log($logMsg, 'result');
+
         return $lyricsStream;
     }
 
@@ -555,7 +579,9 @@ class MusicTug
                 mkdir($this->_config[playlistsPath], 755, true);
                 mkdir($this->_config[backupDir] . DIR_S . 'backups', 755, true);
             }
-            // TODO: add "logs" dir 
+            if (!is_dir($this->_config[logPath])) {
+                mkdir($this->_config[logPath], 755, true);
+            }
         }
 
         if ($mode == 'media' OR $mode == 'both') {
@@ -813,6 +839,8 @@ trait tagsStreamTrait
         $artist   = MusicTugHelper::filterName($this->_artist, 'artist');
      
         foreach ($optArray as $opt) {
+            MusicTugHelper::log("Try to get tags remotely with options:  '" . implode(', ', $opt) . "'");
+
             $tags           = array();
             $meta           = array();
             $curlPostFields = null;
@@ -921,7 +949,12 @@ trait tagsStreamTrait
                 );
 
                 $this->_tmp[tagsStream][] = $tags;
+
             }
+            
+            $logMsg = "{$tags[similarIndex]}(similar),  "
+                    . "{$tags[meta][title]}(title),  {$tags[meta][album]}(album),  {$tags[meta][artist]}(artist)";
+            MusicTugHelper::log($logMsg);
         }
     }
 

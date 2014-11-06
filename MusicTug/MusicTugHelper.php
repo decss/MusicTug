@@ -5,6 +5,7 @@
 class MusicTugHelper
 {
     private static $_config     = array();
+    private static $_t1         = null;
 
     private static $_tagFilter  = array(
         m4a     => array('title', 'album', 'artist', 'genre', 'comment', 'date' => 'year', 'track' => 'tracknum', 'tempo' => 'bpm'),
@@ -101,9 +102,35 @@ class MusicTugHelper
 
         $configText .= "\r\n";
         $configText .= "// \r\n";
-        $configText .= '$mtConfig[logPath]             = \'.\log\';' . "\r\n";
+        $configText .= '$mtConfig[logPath]             = \'.\_log\';' . "\r\n";
 
         file_put_contents(MT_CONFIG_FILE, $configText);
+    }
+
+    static function log($msg = null, $type = 'info', $args = null)
+    {
+        $logPath    = self::$_config[logPath] . DIR_S . 'musictug.log';
+        $backtrace  = debug_backtrace();
+        if ($backtrace[1]['class'] AND $backtrace[1]['function']) {
+            $mehtod = $backtrace[1]['class'] . '::' . $backtrace[1]['function'];
+        }
+        self::$_t1  = (self::$_t1) ? : T1;
+        $time       = round(microtime(true) - self::$_t1, 4);
+        self::$_t1  = microtime(true);
+
+        if (!$msg) {
+            $msgLog    = "\r\n";
+        } else {
+            $date      = date('m-d H:i:s');
+            $time      = str_pad($time, 6);
+            $type      = str_pad(strtoupper($type), 8);
+            $methodMsg = str_pad($mehtod, 26);
+            $argsMsg   = ($args) ? '  -  ' . implode(', ', $args) : null;
+            $msgLog    = $date . ' | ' . $time . ' | ' . $type . ' | ' . $methodMsg . ' | ' . $msg . $argsMsg . "\r\n";
+        }
+
+        error_log($msgLog, 3, $logPath);
+        return true;
     }
 
 
