@@ -344,7 +344,7 @@ class MusicTug
             $execShell = $shell;
         } elseif ($this->_config[shell] == 'powershell') {
             // TODO: implement POWERSHELL construction
-            // $execShell = $this->_config[powershellPath] . 'powershell ' . realpath('.' . DIR_S) . DIR_S . $shell;
+            // $execShell = $this->_config[powershellPath] . DIR_S . 'powershell ' . realpath('.' . DIR_S) . DIR_S . $shell;
         } elseif ($this->_config[shell] == 'unixshell') {
             // TODO: implement linux shell construction
         }

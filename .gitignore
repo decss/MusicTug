@@ -1,4 +1,4 @@
 # Ignore everything in this directory
 Index.config.php
-# Except this file
+# Except this
 !.gitignore
