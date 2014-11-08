@@ -25,6 +25,7 @@ class MusicTug
     private $_stream     = array();
 
     private $_tmp        = array();
+    private $_time       = array();
 
     private $_noise      = array(
         // title  => array('(Instrumental)'),
@@ -35,6 +36,8 @@ class MusicTug
 
     function __construct($trackData, $options = array())
     {
+        $this->_time[start] = microtime(true);
+
         // Set config
         $this->_title       = trim($trackData[title]);
         $this->_album       = trim($trackData[album]);
@@ -81,7 +84,7 @@ class MusicTug
     function init()
     {
         MusicTugHelper::log();
-        MusicTugHelper::log("'$this->_title' by '$this->_artist' on '$this->_album'");
+        MusicTugHelper::log("'$this->_title' by '$this->_artist' on '$this->_album'", 'init');
 
         // Create media dirs
         $this->_createDirs('media');
@@ -180,11 +183,13 @@ class MusicTug
         
         // If storeArtwork == false then delete artwork file (stored above)
         if (!$this->_config[storeArtwork] AND $this->_isSaved[artwork]) {
+            MusicTugHelper::log("Removing artwork file:  {$this->_isSaved[artwork]}", 'file');
             unlink($this->_isSaved[artwork]);
         }
 
         // If storeLyrics == false then delete lyrics file (stored above)
         if (!$this->_config[storeLyrics] AND $this->_isSaved[lyrics]) {
+            MusicTugHelper::log("Removing lyrics file:  {$this->_isSaved[lyrics]}", 'file');
             unlink($this->_isSaved[lyrics]);
             $scandir = scandir(dirname($this->_isSaved[lyrics]));
             if (count($scandir) == 2) {
@@ -199,7 +204,10 @@ class MusicTug
         }
 
 
-        MusicTugHelper::log("Done!");
+        // Calc execution time
+        $this->_time[total] = round(microtime(true) - $this->_time[start], 3);
+
+        MusicTugHelper::log("Done in {$this->_time[total]} sec", 'init');
     }
 
 
@@ -211,6 +219,8 @@ class MusicTug
      */
     private function _embedTags()
     {
+        MusicTugHelper::log("Going to embed tags");
+
         $shell   = null;
         $inPath  = $this->_path[trackAbs];
         $outPath = $this->_path[trackAbs] . '.tags.' . $this->_config[trackExt];
@@ -237,6 +247,8 @@ class MusicTug
      */
     private function _embedLyrics()
     {
+        MusicTugHelper::log("Going to embed lyrics");
+
         if (is_file($this->_isSaved[lyrics]) == true) {
             $lyricsPath = $this->_isSaved[lyrics];
         } elseif ($this->_isExist[lyrics] == true) {
@@ -274,6 +286,8 @@ class MusicTug
      */
     private function _embedArtwork()
     {
+        MusicTugHelper::log("Going to embed artwork");
+
         if (is_file($this->_isSaved[artwork]) == true) {
             $artworkPath = $this->_isSaved[artwork];
         } elseif ($this->_isExist[artwork] == true) {
@@ -314,6 +328,8 @@ class MusicTug
      */
     private function _convert($path, $path2)
     {
+        MusicTugHelper::log("Going to convert file");
+
         $options  = null;
         $pathExt  = substr_replace($path, null, 0, strripos($path, '.') + 1); 
         $path2Ext = substr_replace($path2, null, 0, strripos($path2, '.') + 1);
@@ -353,12 +369,14 @@ class MusicTug
             // TODO: implement linux shell construction
         }
 
-        MusicTugHelper::log("Execute shell:  " . $execShell);
 
         if ($execShell) {
             exec($execShell);
+            MusicTugHelper::log("Execute shell:  " . $execShell, 'shell');
+            
             return true;
         }
+        MusicTugHelper::log("Failed to execute shell", 'error');
 
         return false;
     }
@@ -371,8 +389,6 @@ class MusicTug
      */
     private function _openStream($url)
     {
-        MusicTugHelper::log("Try to get file from url:  $url");
-
         $stream = array();
         $ch     = curl_init();
         curl_setopt($ch, CURLOPT_URL,            $url);
@@ -396,7 +412,7 @@ class MusicTug
 
         $logMsg = "{$stream[info][http_code]}(code),  {$stream[info][total_time]}(time),  "
                 . "{$stream[info][content_type]}(mime),  {$stream[info][size_download]}(size)";
-        MusicTugHelper::log($logMsg, 'result');
+        MusicTugHelper::log($logMsg, 'stream');
 
         return $stream;
     }
@@ -411,6 +427,8 @@ class MusicTug
      */
     private function _saveStream($file, $path, $rewrite = true)
     {
+        MusicTugHelper::log("Going to save stream");
+
         if ($rewrite == false AND is_file($path) == true) {
             return false;
         }
@@ -426,9 +444,11 @@ class MusicTug
         fclose($fp);
 
         if (is_file($path) == true) {
+            MusicTugHelper::log("Saved as:  $path", 'file');
             return true;
         }
 
+        MusicTugHelper::log("Failed to save as:  $path", 'error');
         return false;
     }
 
@@ -442,6 +462,8 @@ class MusicTug
         if ($this->_url[track] == null) {
             throw new Exception('trackUrl must be specified to stream track');
         }
+
+        MusicTugHelper::log("Going to get track stream from:  " . $this->_url[track]);
         $trackStream = $this->_openStream($this->_url[track]);
 
         return $trackStream;
@@ -457,6 +479,8 @@ class MusicTug
         if ($this->_url[artwork] == null) {
             throw new Exception('artworkUrl must be specified to stream artwork');
         }
+
+        MusicTugHelper::log("Going to get artwork stream from:  " . $this->_url[artwork]);
         $artworkStream = $this->_openStream($this->_url[artwork]);
 
         return $artworkStream;
@@ -475,9 +499,9 @@ class MusicTug
         $artist = $this->_artist;
         $apiUrl = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&action=lyrics';
         $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
-
-        MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
         $xml    = simplexml_load_file($reqUrl);
+
+        MusicTugHelper::log("Going to get lyrics (try 1) from url:  $reqUrl");
 
         if ($xml->lyrics == 'Not found') {
             // Try to use title, album, artist from parsed tags
@@ -492,19 +516,19 @@ class MusicTug
 
         // Try with tags - Title, Artist 
         if ($xml->lyrics == 'Not found' AND $title AND $artist) {
-            MusicTugHelper::log("Attempt failed", 'warning');
+            MusicTugHelper::log("Not found (lyrics)", 'warning');
             
             $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
-            MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
+            MusicTugHelper::log("Going to get lyrics (try 2) from url:  $reqUrl");
             $xml    = simplexml_load_file($reqUrl);
         }
 
         // Try with tags - Title, Artist, Album
         if ($xml->lyrics == 'Not found' AND $title AND $artist AND $album) {
-            MusicTugHelper::log("Attempt failed", 'warning');
+            MusicTugHelper::log("Not found (lyrics)", 'warning');
 
             $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist . '&albumName=' . $album;
-            MusicTugHelper::log("Try to get lyrics from url:  $reqUrl");
+            MusicTugHelper::log("Going to get lyrics (try 3) from url:  $reqUrl");
             $xml    = simplexml_load_file($reqUrl);
         }
 
@@ -558,7 +582,7 @@ class MusicTug
         
         $logMsg = "{$lyricsStream[chars]}/{$lyricsStream[rows]}(length), {$lyricsStream[header]}(header),  "
                 . "{$lyricsStream[pageUrl]}(pageUrl)";
-        MusicTugHelper::log($logMsg, 'result');
+        MusicTugHelper::log($logMsg, 'stream');
 
         return $lyricsStream;
     }
@@ -622,6 +646,8 @@ trait playlistsTrait
      */
     private function _storePlaylists()
     {
+        MusicTugHelper::log("Going to store playlists");
+
         $plsArr    = $this->_getPlaylistsId();
         $trackPath = $this->_path[trackRel];
 
@@ -656,12 +682,14 @@ trait playlistsTrait
 
         // Create new playlist if not exist
         if (is_file($plsSysPath) == false) {
+            MusicTugHelper::log("Creating playlist at:  $plsSysPath", 'playlist');
             $f = fopen($plsSysPath, 'w');
             fwrite($f, '# ID: ' . $plsId . "\r\n");
             fclose($f);
         } 
 
         // Add track into playlist
+        MusicTugHelper::log("Adding track to playlist at:  $plsSysPath", 'playlist');
         $f = fopen($plsSysPath, 'a');
         fwrite($f, $trackPath."\r\n");
         fclose($f);
@@ -683,6 +711,7 @@ trait playlistsTrait
             unlink($plsPath);
         }
 
+        MusicTugHelper::log("Copying playlist to:  $plsPath", 'playlist');
         copy($plsSysPath, $plsPath);
     }
 
@@ -706,6 +735,8 @@ trait playlistsTrait
         }
         
         if ($sysCnt >= $bckpCnt + 20) {
+            MusicTugHelper::log("Backuping playlist at:  $plsSysPath", 'file');
+
             copy($plsSysPath, $plsBckpPath . '.' . date("Y-m-d_H-i-s") . '.bak');
         }
     }
@@ -763,6 +794,8 @@ trait tagsStreamTrait
      */
     private function _getTagsArray()
     {
+        MusicTugHelper::log("Getting tags array (instead of tags stream)");
+
         $tags = array();
         
         if ($this->_title) {
@@ -795,6 +828,8 @@ trait tagsStreamTrait
      */
     function getTagsStream()
     {
+        MusicTugHelper::log("Going to get tags stream");
+        
         $streamIndex  = null;
         $similarIndex = null;
         $tagsStream   = array();
@@ -949,12 +984,15 @@ trait tagsStreamTrait
                 );
 
                 $this->_tmp[tagsStream][] = $tags;
-
             }
             
-            $logMsg = "{$tags[similarIndex]}(similar),  "
-                    . "{$tags[meta][title]}(title),  {$tags[meta][album]}(album),  {$tags[meta][artist]}(artist)";
-            MusicTugHelper::log($logMsg);
+            $logMsg = "{$tags[similarIndex]}(similar),  {$tags[meta][title]}(title),  {$tags[meta][album]}(album),  "
+                    . "{$tags[meta][artist]}(artist),  " . implode(', ', $opt) . "(options)";
+            MusicTugHelper::log($logMsg, 'stream');
+
+            if ($tags[similarIndex] == 100) {
+                break;
+            }
         }
     }
 

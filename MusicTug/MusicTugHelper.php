@@ -52,6 +52,10 @@ class MusicTugHelper
         self::$_config[genrePlsStore] = intval(self::$_config[genrePlsStore]);
         self::$_config[moodPlsStore]  = intval(self::$_config[moodPlsStore]);
         self::$_config[tempoPlsStore] = intval(self::$_config[tempoPlsStore]);
+
+        if (!self::$_config[logLevel]) {
+            self::$_config[logLevel] = array();
+        }
     }
 
     /**
@@ -69,7 +73,7 @@ class MusicTugHelper
         $configText .= '$mtConfig[gracenoteHost]       = \'https://208.72.242.176/webapi/xml/1.0/\';' . "\r\n";
         $configText .= '$mtConfig[curlProxy]           = \'\';' . "\r\n";
         $configText .= "\r\n";
-        $configText .= '$mtConfig[downloadPath]        = \'E:\Music\pandora-test-1\';' . "\r\n";
+        $configText .= '$mtConfig[downloadPath]        = \'E:\Music\_musicTug-test-1\';' . "\r\n";
         $configText .= '$mtConfig[tmpPath]             = \'.\_tmp\';' . "\r\n";
         $configText .= '$mtConfig[playlistsPath]       = \'.\_playlists\';' . "\r\n";
         $configText .= '$mtConfig[shell]               = \'cmd\'; // {\'cmd\'|\'powershell\'|\'unixshell\'}' . "\r\n";
@@ -102,6 +106,9 @@ class MusicTugHelper
 
         $configText .= "\r\n";
         $configText .= "// \r\n";
+        $configText .= '$mtConfig[logLevel]            = array('
+                     . '\'init\',\'info\',\'stream\',\'file\',\'shell\',\'warning\',\'error\',\'playlist\''
+                     . ');' . "\r\n";
         $configText .= '$mtConfig[logPath]             = \'.\_log\';' . "\r\n";
 
         file_put_contents(MT_CONFIG_FILE, $configText);
@@ -109,28 +116,35 @@ class MusicTugHelper
 
     static function log($msg = null, $type = 'info', $args = null)
     {
-        $logPath    = self::$_config[logPath] . DIR_S . 'musictug.log';
-        $backtrace  = debug_backtrace();
-        if ($backtrace[1]['class'] AND $backtrace[1]['function']) {
-            $mehtod = $backtrace[1]['class'] . '::' . $backtrace[1]['function'];
-        }
-        self::$_t1  = (self::$_t1) ? : T1;
-        $time       = round(microtime(true) - self::$_t1, 4);
-        self::$_t1  = microtime(true);
+        $type = strtolower($type);
+        if (!$msg OR in_array($type, self::$_config[logLevel])) {
+            $logPath    = self::$_config[logPath] . DIR_S . 'musictug.log';
+            $backtrace  = debug_backtrace();
+            if ($backtrace[1]['class'] AND $backtrace[1]['function']) {
+                $mehtod = $backtrace[1]['class'] . '::' . $backtrace[1]['function'];
+            }
+            self::$_t1  = (self::$_t1) ? : T1;
+            $time       = round(microtime(true) - self::$_t1, 3);
+            self::$_t1  = microtime(true);
 
-        if (!$msg) {
-            $msgLog    = "\r\n";
-        } else {
-            $date      = date('m-d H:i:s');
-            $time      = str_pad($time, 6);
-            $type      = str_pad(strtoupper($type), 8);
-            $methodMsg = str_pad($mehtod, 26);
-            $argsMsg   = ($args) ? '  -  ' . implode(', ', $args) : null;
-            $msgLog    = $date . ' | ' . $time . ' | ' . $type . ' | ' . $methodMsg . ' | ' . $msg . $argsMsg . "\r\n";
+            if (!$msg) {
+                $msgLog    = "\r\n";
+            } else {
+                $date      = date('m-d H:i:s');
+                $time      = str_pad($time, 7);
+                $type      = str_pad(strtoupper($type), 8);
+                $methodMsg = str_pad($mehtod, 26);
+                $argsMsg   = ($args) ? '  -  ' . implode(', ', $args) : null;
+                $msgLog    = $date . ' | ' . $time . ' | ' . $type . ' | ' . $methodMsg . ' | ' 
+                           . $msg . $argsMsg . "\r\n";
+            }
+            
+            error_log($msgLog, 3, $logPath);
+            return true;
         }
 
-        error_log($msgLog, 3, $logPath);
-        return true;
+        return false;
+
     }
 
 
