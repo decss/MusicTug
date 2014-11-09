@@ -6,6 +6,7 @@ class MusicTugHelper
 {
     private static $_config     = array();
     private static $_t1         = null;
+    private static $_pid        = null;
 
     private static $_tagFilter  = array(
         m4a     => array('title', 'album', 'artist', 'genre', 'comment', 'date' => 'year', 'track' => 'tracknum', 'tempo' => 'bpm'),
@@ -116,7 +117,9 @@ class MusicTugHelper
 
     static function log($msg = null, $type = 'info', $args = null)
     {
-        $type = strtolower($type);
+        self::$_pid = (self::$_pid) ? : substr_replace(md5(microtime(true)), null, rand(2,5));
+        $type       = strtolower($type);
+
         if (!$msg OR in_array($type, self::$_config[logLevel])) {
             $logPath    = self::$_config[logPath] . DIR_S . 'musictug.log';
             $backtrace  = debug_backtrace();
@@ -131,12 +134,18 @@ class MusicTugHelper
                 $msgLog    = "\r\n";
             } else {
                 $date      = date('m-d H:i:s');
+                $pid       = str_pad(self::$_pid, 5);
                 $time      = str_pad($time, 7);
                 $type      = str_pad(strtoupper($type), 8);
                 $methodMsg = str_pad($mehtod, 26);
                 $argsMsg   = ($args) ? '  -  ' . implode(', ', $args) : null;
-                $msgLog    = $date . ' | ' . $time . ' | ' . $type . ' | ' . $methodMsg . ' | ' 
-                           . $msg . $argsMsg . "\r\n";
+                $msgLog    = $date
+                           . ' | ' . $pid
+                           . ' | ' . $time 
+                           . ' | ' . $type 
+                           . ' | ' . $methodMsg 
+                           . ' | ' . $msg . $argsMsg 
+                           . "\r\n";
             }
             
             error_log($msgLog, 3, $logPath);

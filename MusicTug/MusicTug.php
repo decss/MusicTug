@@ -63,9 +63,11 @@ class MusicTug
         $this->_path[trackAbs]    = $this->_path[absolute] . DIR_S . $this->_name[title] . '.' . $this->_config[trackExt];
         $this->_path[artwork]     = $this->_path[absolute] . DIR_S . $this->_name[artwork] . '.' . $this->_config[artworkExt];
         $this->_path[lyrics]      = $this->_path[absolute] . DIR_S . 'lyrics' . DIR_S . $this->_name[title] . '.txt';
+        $this->_path[lockFile]    = $this->_path[absolute] . DIR_S . $this->_name[title] . '.lock';
         $this->_isExist[track]    = is_file($this->_path[trackAbs]) ? : false;
         $this->_isExist[artwork]  = is_file($this->_path[artwork]) ? : false;
         $this->_isExist[lyrics]   = is_file($this->_path[lyrics]) ? : false;
+        $this->_isExist[lockFile] = is_file($this->_path[lock]) ? : false;
         $this->_isSaved[track]    = null;
         $this->_isSaved[artwork]  = null;
         $this->_isSaved[lyrics]   = null;
@@ -83,11 +85,20 @@ class MusicTug
 
     function init()
     {
+        // Check if dir is locked
+        if ($this->_isLockedDir()) {
+            MusicTugHelper::log("Dir is locked, aborting...", 'init');
+            return false;
+        }
+
         MusicTugHelper::log();
         MusicTugHelper::log("'$this->_title' by '$this->_artist' on '$this->_album'", 'init');
 
         // Create media dirs
         $this->_createDirs('media');
+
+        // Lock dir
+        $this->_lockDir();
 
 
         // Track stream //////////////
@@ -204,14 +215,63 @@ class MusicTug
         }
 
 
+        // Unlock dir
+        $this->_unlockDir();
+
         // Calc execution time
         $this->_time[total] = round(microtime(true) - $this->_time[start], 3);
 
         MusicTugHelper::log("Done in {$this->_time[total]} sec", 'init');
+        return true;
     }
 
 
+    /**
+     * Create lock file
+     */
+    private function _lockDir()
+    {
+        MusicTugHelper::log("Locking dir");
+        
+        $f = fopen($this->_path[lockFile], 'w');
+        fwrite($f, time());
+        fclose($f);
+    }
 
+
+    /**
+     * Delete lock file
+     */
+    private function _unlockDir()
+    {
+        MusicTugHelper::log("Unlocking dir");
+
+        if (is_file($this->_path[lockFile])) {
+            unlink($this->_path[lockFile]);
+        }
+    }
+
+
+    /**
+     * Check if dir is locked. If .lock file isn't created or it's older thn 300s - true
+     * @return boolean Dir locked or not
+     */
+    private function _isLockedDir()
+    {
+        $isLocked = false;
+
+        if (is_file($this->_path[lockFile])) {
+            if (time() > file_get_contents($this->_path[lockFile]) + 300) {
+                // If .lock is older than 300s - unlicking
+                $this->_unlockDir();
+            } else {
+                // Else retrun trye
+                $isLocked = true;
+            }
+        }
+
+        return $isLocked;
+    }
 
 
     /**
@@ -650,6 +710,7 @@ trait playlistsTrait
 
         $plsArr    = $this->_getPlaylistsId();
         $trackPath = $this->_path[trackRel];
+        $isStored  = false;
 
         foreach ($plsArr as $type => $array) {
             foreach ($array as $level => $plsId) {
@@ -660,8 +721,14 @@ trait playlistsTrait
                     $this->_backupPlaylist($plsId);
                     $this->_updatePlaylist($plsId, $trackPath);
                     $this->_copyPlaylist($plsId, $plsPath);
+
+                    $isStored = true;
                 }
             }
+        }
+
+        if (!$isStored) {
+            MusicTugHelper::log("No playlists to store");
         }
     }
 
