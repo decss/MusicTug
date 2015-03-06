@@ -68,10 +68,10 @@ function __autoload($className) {
  */
 function dbg($text, $exit = true)
 {
-    echo '<pre data-exit="' . $exit . '" style="font-size: 11px; line-height: 11px;">' . "\r\n\r\n";
-    echo '&gt;>'; 
+    echo '<pre data-exit="' . $exit . '" style="font-size: 11px; line-height: 11px; margin: 0;">' . "\r\n\r\n";
+    echo '>>'; 
     print_r($text);
-    echo '<&lt;' . "\r\n";
+    echo '<<' . "\r\n";
     echo "\r\n" . '</pre>';
     
     if ($exit == true) {

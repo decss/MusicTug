@@ -34,6 +34,11 @@ class MusicTug
     );
 
 
+    /**
+     * Construct
+     * @param array $trackData Array with track data like array('title','album','artist','trackUrl','artworkUrl')
+     * @param array $options Options array
+     */
     function __construct($trackData, $options = array())
     {
         $this->_time[start] = microtime(true);
@@ -79,14 +84,18 @@ class MusicTug
         // Create system dirs
         $this->_createDirs('system');
 
+        // Debug
         // dbg($this);
     }
 
 
+    /**
+     * Init
+     */
     function init()
     {
         // Check if dir is locked
-        if ($this->_isLockedDir()) {
+        if (MusicTugHelper::isLockedDir($this->_path[lockFile])) {
             MusicTugHelper::log("Dir is locked, aborting...", 'init');
             return false;
         }
@@ -98,8 +107,7 @@ class MusicTug
         $this->_createDirs('media');
 
         // Lock dir
-        $this->_lockDir();
-
+        MusicTugHelper::lockDir($this->_path[lockFile]);
 
         // Track stream //////////////
         //////////////////////////////
@@ -119,6 +127,8 @@ class MusicTug
                 // Set saved path
                 $this->_isSaved[track] = $trackPath;
             }
+        } else {
+            MusicTugHelper::log("Skipped: getTrackStream() and _saveStream(). Track url is not specified or track already exist");
         }
 
 
@@ -143,6 +153,8 @@ class MusicTug
                 // Set saved path
                 $this->_isSaved[artwork] = $artworkPath;
             }
+        } else {
+            // MusicTugHelper::log("Skipped:");
         }
 
         // Lyrics stream /////////////
@@ -161,6 +173,8 @@ class MusicTug
 
                 $this->_isSaved[lyrics] = $lyricsPath;
             }
+        } else {
+            // MusicTugHelper::log("Skipped:");
         }
 
         // Tags stream ///////////////
@@ -171,10 +185,13 @@ class MusicTug
             } else {
                 $this->_stream[tags] = $this->_getTagsArray();
             }
+        } else {
+            // MusicTugHelper::log("Skipped:");
         }
 
 
         $isTrackSaved   = ($this->_isSaved[track] AND !$this->_isExist[track]);
+        // $isTagsStream   = ($this->_stream[tags][meta]);
         $isArtworkExist = ($this->_isSaved[artwork] OR $this->_isExist[artwork]);
         $isLyricsExist  = ($this->_isSaved[lyrics] OR $this->_isExist[lyrics]);
 
@@ -183,12 +200,18 @@ class MusicTug
         //////////////////////////////
         if ($this->_config[embedArtwork] AND $isTrackSaved AND $isArtworkExist) {
             $this->_embedArtwork();
+        } else {
+            MusicTugHelper::log("Skipped: _embedArtwork()", 'warning');
         }
         if ($this->_config[embedLyrics] AND $isTrackSaved AND $isLyricsExist) {
             $this->_embedLyrics();
+        } else {
+            MusicTugHelper::log("Skipped: _embedLyrics()", 'warning');
         }
-        if ($this->_config[embedTags] AND !$this->_isExist[track] AND $this->_stream[tags][meta]) {
+        if ($this->_config[embedTags] AND $isTrackSaved AND $this->_stream[tags][meta]) {
             $this->_embedTags();
+        } else {
+            MusicTugHelper::log("Skipped: _embedTags()", 'warning');
         }
 
         
@@ -214,63 +237,148 @@ class MusicTug
             $this->_storePlaylists();
         }
 
-
         // Unlock dir
-        $this->_unlockDir();
+        MusicTugHelper::unlockDir($this->_path[lockFile]);
 
         // Calc execution time
         $this->_time[total] = round(microtime(true) - $this->_time[start], 3);
 
         MusicTugHelper::log("Done in {$this->_time[total]} sec", 'init');
+
         return true;
     }
 
 
     /**
-     * Create lock file
+     * Download track and return in in array
+     * @return array
      */
-    private function _lockDir()
+    function getTrackStream()
     {
-        MusicTugHelper::log("Locking dir");
-        
-        $f = fopen($this->_path[lockFile], 'w');
-        fwrite($f, time());
-        fclose($f);
-    }
-
-
-    /**
-     * Delete lock file
-     */
-    private function _unlockDir()
-    {
-        MusicTugHelper::log("Unlocking dir");
-
-        if (is_file($this->_path[lockFile])) {
-            unlink($this->_path[lockFile]);
+        if ($this->_url[track] == null) {
+            throw new Exception('trackUrl must be specified to stream track');
         }
+
+        MusicTugHelper::log("Going to get track stream from:  " . $this->_url[track]);
+        $trackStream = $this->_openStream($this->_url[track]);
+
+        return $trackStream;
     }
 
 
     /**
-     * Check if dir is locked. If .lock file isn't created or it's older thn 300s - true
-     * @return boolean Dir locked or not
+     * Download cover and return in in array
+     * @retirn array
      */
-    private function _isLockedDir()
+    function getArtworkStream()
     {
-        $isLocked = false;
+        if ($this->_url[artwork] == null) {
+            throw new Exception('artworkUrl must be specified to stream artwork');
+        }
 
-        if (is_file($this->_path[lockFile])) {
-            if (time() > file_get_contents($this->_path[lockFile]) + 300) {
-                // If .lock is older than 300s - unlicking
-                $this->_unlockDir();
-            } else {
-                // Else retrun trye
-                $isLocked = true;
+        MusicTugHelper::log("Going to get artwork stream from:  " . $this->_url[artwork]);
+        $artworkStream = $this->_openStream($this->_url[artwork]);
+
+        return $artworkStream;
+    }
+
+
+    /**
+     * Parse lyrics on http://lyrics.wikia.com
+     * @return array Lyrics Array('requestUrl', 'pageUrl', 'header', 'lyrics', 'chars', 'rows')
+     */
+    function getLyricsStream()
+    {
+        $title  = $this->_title;
+        $artist = $this->_artist;
+        $apiUrl = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&action=lyrics';
+        $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
+        $xml    = simplexml_load_file($reqUrl);
+
+        MusicTugHelper::log("Going to get lyrics (try 1) from url:  $reqUrl");
+
+        if ($xml->lyrics == 'Not found') {
+            // Try to use title, album, artist from parsed tags
+            $tags = $this->getTagsStream();
+
+            if ($tags[meta]) {
+                $title  = str_replace(' ', '%20', $tags[meta][title]);
+                $album  = str_replace(' ', '%20', $tags[meta][album]);
+                $artist = str_replace(' ', '%20', $tags[meta][artist]);
             }
         }
 
-        return $isLocked;
+        // Try with tags - Title, Artist 
+        if ($xml->lyrics == 'Not found' AND $title AND $artist) {
+            MusicTugHelper::log("Not found (lyrics)", 'warning');
+            
+            $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
+            MusicTugHelper::log("Going to get lyrics (try 2) from url:  $reqUrl");
+            $xml    = simplexml_load_file($reqUrl);
+        }
+
+        // Try with tags - Title, Artist, Album
+        if ($xml->lyrics == 'Not found' AND $title AND $artist AND $album) {
+            MusicTugHelper::log("Not found (lyrics)", 'warning');
+
+            $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist . '&albumName=' . $album;
+            MusicTugHelper::log("Going to get lyrics (try 3) from url:  $reqUrl");
+            $xml    = simplexml_load_file($reqUrl);
+        }
+
+        if ($xml->lyrics != 'Not found') {
+            $lyricsUrl  = urldecode((string)$xml->url);
+            $lyricsUrl  = str_replace('?', '%3F', $lyricsUrl);
+            $lyricsPage = file_get_contents($lyricsUrl);
+        }
+
+        if ($lyricsPage) {
+            // TODO: make parsing when links are displayed instead of lyrics
+            $lyricsHeader = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, 'class="WikiaPageHeader"'));
+            $lyricsHeader = substr_replace($lyricsHeader, null, 0, strpos($lyricsHeader, "<h1>") + strlen('<h1>'));
+            $lyricsHeader = substr_replace($lyricsHeader, null, strpos($lyricsHeader, "</h1>"));
+            $lyricsHeader = preg_replace("~\s?lyrics$~i", null, $lyricsHeader);
+
+            $lyrics = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, "<div class='lyricbox'>"));
+            $lyrics = substr_replace($lyrics, null, 0, strpos($lyrics, '&#'));
+            if (strstr($lyrics, "<div class='rtMatcher'>")) {
+                $lyrics = substr_replace($lyrics, null, strpos($lyrics, "<div class='rtMatcher'>"));
+            }
+            if (strstr($lyrics, '<!--')) {
+                $lyrics = substr_replace($lyrics, null, strpos($lyrics, '<!--'));
+            }
+
+            $lyrics = html_entity_decode($lyrics);
+            $lyrics = str_replace("<br />", "\r\n", $lyrics);
+            $lyrics = str_replace("&#39;", "'", $lyrics);
+            $lyrics = strip_tags($lyrics);
+
+            if (stristr($lyrics, 'Unfortunately, we are not licensed to display') == true) {
+                $lyrics = substr_replace($lyrics, null, strpos($lyrics, 'Unfortunately, we are not licensed to display'));
+                $lyrics = trim($lyrics);
+                $lyrics .= "\r\n\r\n" . "--- not full lyrics ---";
+            }
+            $lyrics = trim($lyrics);
+        }
+
+        if (strlen($lyrics) <= 24) {
+            $lyrics = null;
+        }
+
+        // Set return
+        $lyricsStream[success]    = (bool)$lyrics;
+        $lyricsStream[requestUrl] = $reqUrl;
+        $lyricsStream[pageUrl]    = $lyricsUrl;
+        $lyricsStream[header]     = $lyricsHeader;
+        $lyricsStream[lyrics]     = $lyrics;
+        $lyricsStream[chars]      = strlen($lyrics);
+        $lyricsStream[rows]       = substr_count(str_replace("\r\n\r\n", "\r\n", trim($lyrics)), "\r\n");
+        
+        $logMsg = "{$lyricsStream[chars]}/{$lyricsStream[rows]}(length), {$lyricsStream[header]}(header),  "
+                . "{$lyricsStream[pageUrl]}(pageUrl)";
+        MusicTugHelper::log($logMsg, 'stream');
+
+        return $lyricsStream;
     }
 
 
@@ -468,11 +576,15 @@ class MusicTug
             $stream[ext]     = MusicTugHelper::getExtByMime($info[content_type]);
             $stream[info]    = $info;
             $stream[file]    = $file;
+            $logMsg  = "{$stream[info][http_code]}(code),  {$stream[info][total_time]}(time),  "
+                     . "{$stream[info][content_type]}(mime),  {$stream[info][size_download]}(size)";
+            $logType = 'stream';
+        } else {
+            $logMsg = "Failed to open stream with code: $info[http_code], in $info[total_time] sec";
+            $logType = 'error';
         }
 
-        $logMsg = "{$stream[info][http_code]}(code),  {$stream[info][total_time]}(time),  "
-                . "{$stream[info][content_type]}(mime),  {$stream[info][size_download]}(size)";
-        MusicTugHelper::log($logMsg, 'stream');
+        MusicTugHelper::log($logMsg, $logType);
 
         return $stream;
     }
@@ -493,7 +605,6 @@ class MusicTug
             return false;
         }
 
-        // Check if path dirs exist an create if not
         $pathCheck = dirname($path);
         if (is_dir($pathCheck) == false) {
             mkdir($pathCheck, 0755, true);
@@ -510,141 +621,6 @@ class MusicTug
 
         MusicTugHelper::log("Failed to save as:  $path", 'error');
         return false;
-    }
-
-
-    /**
-     * Download track and return in in array
-     * @return array
-     */
-    function getTrackStream()
-    {
-        if ($this->_url[track] == null) {
-            throw new Exception('trackUrl must be specified to stream track');
-        }
-
-        MusicTugHelper::log("Going to get track stream from:  " . $this->_url[track]);
-        $trackStream = $this->_openStream($this->_url[track]);
-
-        return $trackStream;
-    }
-
-
-    /**
-     * Download cover and return in in array
-     * @retirn array
-     */
-    function getArtworkStream()
-    {
-        if ($this->_url[artwork] == null) {
-            throw new Exception('artworkUrl must be specified to stream artwork');
-        }
-
-        MusicTugHelper::log("Going to get artwork stream from:  " . $this->_url[artwork]);
-        $artworkStream = $this->_openStream($this->_url[artwork]);
-
-        return $artworkStream;
-    }
-
-
-
-
-    /**
-     * Parse lyrics on http://lyrics.wikia.com
-     * @return array Lyrics Array('requestUrl', 'pageUrl', 'header', 'lyrics', 'chars', 'rows')
-     */
-    function getLyricsStream()
-    {
-        $title  = $this->_title;
-        $artist = $this->_artist;
-        $apiUrl = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&action=lyrics';
-        $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
-        $xml    = simplexml_load_file($reqUrl);
-
-        MusicTugHelper::log("Going to get lyrics (try 1) from url:  $reqUrl");
-
-        if ($xml->lyrics == 'Not found') {
-            // Try to use title, album, artist from parsed tags
-            $tags = $this->getTagsStream();
-
-            if ($tags[meta]) {
-                $title  = str_replace(' ', '%20', $tags[meta][title]);
-                $album  = str_replace(' ', '%20', $tags[meta][album]);
-                $artist = str_replace(' ', '%20', $tags[meta][artist]);
-            }
-        }
-
-        // Try with tags - Title, Artist 
-        if ($xml->lyrics == 'Not found' AND $title AND $artist) {
-            MusicTugHelper::log("Not found (lyrics)", 'warning');
-            
-            $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist;
-            MusicTugHelper::log("Going to get lyrics (try 2) from url:  $reqUrl");
-            $xml    = simplexml_load_file($reqUrl);
-        }
-
-        // Try with tags - Title, Artist, Album
-        if ($xml->lyrics == 'Not found' AND $title AND $artist AND $album) {
-            MusicTugHelper::log("Not found (lyrics)", 'warning');
-
-            $reqUrl = $apiUrl . '&song=' . $title . '&artist=' . $artist . '&albumName=' . $album;
-            MusicTugHelper::log("Going to get lyrics (try 3) from url:  $reqUrl");
-            $xml    = simplexml_load_file($reqUrl);
-        }
-
-        if ($xml->lyrics != 'Not found') {
-            $lyricsUrl  = urldecode((string)$xml->url);
-            $lyricsUrl  = str_replace('?', '%3F', $lyricsUrl);
-            $lyricsPage = file_get_contents($lyricsUrl);
-        }
-
-        if ($lyricsPage) {
-            // TODO: make parsing when links are displayed instead of lyrics
-            $lyricsHeader = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, 'class="WikiaPageHeader"'));
-            $lyricsHeader = substr_replace($lyricsHeader, null, 0, strpos($lyricsHeader, "<h1>") + strlen('<h1>'));
-            $lyricsHeader = substr_replace($lyricsHeader, null, strpos($lyricsHeader, "</h1>"));
-            $lyricsHeader = preg_replace("~\s?lyrics$~i", null, $lyricsHeader);
-
-            $lyrics = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, "<div class='lyricbox'>"));
-            $lyrics = substr_replace($lyrics, null, 0, strpos($lyrics, '&#'));
-            if (strstr($lyrics, "<div class='rtMatcher'>")) {
-                $lyrics = substr_replace($lyrics, null, strpos($lyrics, "<div class='rtMatcher'>"));
-            }
-            if (strstr($lyrics, '<!--')) {
-                $lyrics = substr_replace($lyrics, null, strpos($lyrics, '<!--'));
-            }
-
-            $lyrics = html_entity_decode($lyrics);
-            $lyrics = str_replace("<br />", "\r\n", $lyrics);
-            $lyrics = str_replace("&#39;", "'", $lyrics);
-            $lyrics = strip_tags($lyrics);
-
-            if (stristr($lyrics, 'Unfortunately, we are not licensed to display') == true) {
-                $lyrics = substr_replace($lyrics, null, strpos($lyrics, 'Unfortunately, we are not licensed to display'));
-                $lyrics = trim($lyrics);
-                $lyrics .= "\r\n\r\n" . "--- not full lyrics ---";
-            }
-            $lyrics = trim($lyrics);
-        }
-
-        if (strlen($lyrics) <= 24) {
-            $lyrics = null;
-        }
-
-        // Set return
-        $lyricsStream[success]    = (bool)$lyrics;
-        $lyricsStream[requestUrl] = $reqUrl;
-        $lyricsStream[pageUrl]    = $lyricsUrl;
-        $lyricsStream[header]     = $lyricsHeader;
-        $lyricsStream[lyrics]     = $lyrics;
-        $lyricsStream[chars]      = strlen($lyrics);
-        $lyricsStream[rows]       = substr_count(str_replace("\r\n\r\n", "\r\n", trim($lyrics)), "\r\n");
-        
-        $logMsg = "{$lyricsStream[chars]}/{$lyricsStream[rows]}(length), {$lyricsStream[header]}(header),  "
-                . "{$lyricsStream[pageUrl]}(pageUrl)";
-        MusicTugHelper::log($logMsg, 'stream');
-
-        return $lyricsStream;
     }
 
 
@@ -689,10 +665,6 @@ class MusicTug
         }
     }
 }
-
-
-
-
 
 
 
@@ -809,7 +781,6 @@ trait playlistsTrait
     }
 
 
-
     /**
      * Make array with playlists names
      */
@@ -845,9 +816,6 @@ trait playlistsTrait
     }
 
 }
-
-
-
 
 
 
@@ -934,6 +902,7 @@ trait tagsStreamTrait
             array(), 
             array('no-album'), 
             // array('no-artist'),
+            // array('no-album', 'no-artist'),
         );
 
         $title    = MusicTugHelper::filterName($this->_title, 'track');
@@ -1041,7 +1010,6 @@ trait tagsStreamTrait
                     }
                 }
 
-
                 $tags = array(
                     success      => (bool)$meta,
                     origin       => 'remote',
@@ -1065,8 +1033,8 @@ trait tagsStreamTrait
 
 
     /**
-     * Calculate similar index between input title, album, artisi and parsed
-     * @param array $meta Metatags array
+     * Calculate similar index between input and parsed title/album/artist
+     * @param array $meta Metatags array(title, album, artist)
      * @return int Similar index 0..100
      */
     private function _getSimilarIndex($array)
@@ -1087,5 +1055,6 @@ trait tagsStreamTrait
 
         return $index[ttl];
     }
+
 }
 

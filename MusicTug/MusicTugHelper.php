@@ -115,6 +115,62 @@ class MusicTugHelper
         file_put_contents(MT_CONFIG_FILE, $configText);
     }
 
+
+    /**
+     * Create lock file (Lock dir)
+     * @param string $path Path to file that say's that dir is locked
+     */
+    static function lockDir($path)
+    {
+        MusicTugHelper::log("Locking dir");
+        
+        $f = fopen($path, 'w');
+        fwrite($f, time());
+        fclose($f);
+    }
+
+    /**
+     * Delete lock file (Unlock dir)
+     * @param string $path Path to file that say's that dir is locked
+     */
+    static function unlockDir($path)
+    {
+        MusicTugHelper::log("Unlocking dir");
+
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+
+    /**
+     * Check if dir is locked. If .lock file isn't created or it's older then 300s - true
+     * @param string $path Path to file that say's that dir is locked
+     * @return boolean Dir locked or not
+     */
+    static function isLockedDir($path)
+    {
+        $isLocked = false;
+
+        if (is_file($path)) {
+            if (time() > file_get_contents($path) + 300) {
+                // If .lock is older than 300s - unlicking
+                MusicTugHelper::unlockDir($path);
+            } else {
+                // Else retrun trye
+                $isLocked = true;
+            }
+        }
+
+        return $isLocked;
+    }
+
+    /**
+     * Write log
+     * @param string $msg Log message
+     * @param string $type Log type, one of 'init', 'info', 'stream', 'file', 'shell', 'warning', 'error', 'playlist'
+     * @param string $args Additional text to $msg
+     * @return bool Log write status
+     */
     static function log($msg = null, $type = 'info', $args = null)
     {
         self::$_pid = (self::$_pid) ? : substr_replace(md5(microtime(true)), null, rand(2,5));
@@ -136,6 +192,7 @@ class MusicTugHelper
                 $date      = date('m-d H:i:s');
                 $pid       = str_pad(self::$_pid, 5);
                 $time      = str_pad($time, 7);
+                $type      = ($type == 'error') ? '*' . $type . '*' : $type;
                 $type      = str_pad(strtoupper($type), 8);
                 $methodMsg = str_pad($mehtod, 26);
                 $argsMsg   = ($args) ? '  -  ' . implode(', ', $args) : null;
@@ -153,30 +210,37 @@ class MusicTugHelper
         }
 
         return false;
-
     }
-
 
     /**
-     * Print Json result and exit
-     * @param array $jsonAnswer optional data to json encode
+     * Print JSON response and exit
+     * @param string $jsonStatus optional Status of JSON response success|error|fail
+     * @param string|array $jsonData optional response data
+     * @param string $errorMsg optional Message with error text
      */
-    static function printAnswer($jsonAnswer = null)
+    static function jsonResponse($jsonStatus = 'fail', $jsonData = null, $errorMsg = null)
     {
-        if (!$jsonAnswer) {
-            $jsonAnswer->error["code"] = 1;
+        $statusArray = array('success', 'error', 'fail');
+        if (!in_array($jsonStatus, $statusArray)) {
+            $jsonStatus = 'fail';
         }
 
-        $jsonAnswer = json_encode($jsonAnswer);
+        $jsonInfo = array(
+            ts          => time(),
+            errorMsg    => $errorMsg
+        );
 
-        if ($_GET[callback]) {
-            $jsonAnswer = $_GET[callback].'('.$jsonAnswer.')';
-        }
+        $jsonResponse = array(
+            status  => $jsonStatus, 
+            info    => $jsonInfo, 
+            data    => $jsonData, 
+        );
 
-        echo $jsonAnswer;
+        $json = json_encode($jsonResponse);
+
+        echo $json;
         exit;
     }
-
 
     /**
      * Get playlist sysetm path in $_config[playlistsPath] dir
@@ -377,6 +441,44 @@ class MusicTugHelper
 
         return $ext;
     }
+	
+	/**
+     * Print result of GraceNote requeest
+     */
+    static function testGracenote()
+    {
+        $config = self::getConfig();
+
+        $curlPost = '<QUERIES>
+            <LANG>eng</LANG>
+            <AUTH>
+                <CLIENT>' . $config[gracenoteClientId] . '</CLIENT>
+                <USER>' . $config[gracenoteUserId] . '</USER>
+            </AUTH>
+            <QUERY CMD="ALBUM_SEARCH">
+                <TEXT TYPE="ARTIST">flying lotus</TEXT>
+                <TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
+                <TEXT TYPE="TRACK_TITLE">all in</TEXT>
+            </QUERY>
+        </QUERIES>';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL,            $config[gracenoteHost]);
+        curl_setopt($ch, CURLOPT_TIMEOUT,        60);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // false for SSL work
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // false for SSL work
+        curl_setopt($ch, CURLOPT_POST,           true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS,     $curlPost); 
+        if ($config[curlProxy] != '') {
+            curl_setopt($ch, CURLOPT_PROXY,      $config[curlProxy]);
+        }
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        dbg($response);
+    }
+
 }
-
-

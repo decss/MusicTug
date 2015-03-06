@@ -9,10 +9,8 @@ class MusicTugApi
     {
         if ($action) {
             $jsonAnswer['answer'] = 'yes';
-            MusicTugHelper::printAnswer($jsonAnswer);
+            MusicTugHelper::jsonResponse('success', $jsonAnswer);
         }
     }
 
 }
-
-
