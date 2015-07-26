@@ -2,209 +2,95 @@
 <script type="text/javascript" src="http://underscorejs.org/underscore-min.js"></script>
 
 
-<style>
-#mt-panel, #mt-panel table, #mt-panel a {
-    color: #939393;
-    line-height: 11px;
-    font-size: 10px;
-    font-family: "Lucida Console";
-    /*font-family: "Verdana";*/
-}
-#mt-panel {
-    border: 1px solid blue;
-    width: 330px;
-    height: 300px;
-    background: black;
-    padding: 4px;
-    /*position: absolute;*/
-    /*right: 0;*/
-    /*top: 0;*/
-}
-#mt-panel table {width: 100%; border-collapse: collapse;}
-#mt-panel table, #mt-panel .pad-bot {margin-bottom: 6px;}
-#mt-panel table td {padding: 0;}
-#mt-panel span, #mt-panel span a {color: #3399FF;}
-#mt-panel .mt-green {color: #70FF2D;}
-#mt-panel .mt-red {color: #FF2D2D;}
-#mt-panel .mt-white {color: white;}
-
-
-#mt-panel .mt-lyrics {
-    height: 22px;
-}
-
-#mt-panel .mt-lyrics-text {
-    cursor: pointer;
-    display: inline-block;
-    height: 22px;
-    width: 290px;
-    overflow: hidden;
-    vertical-align: top;
-    padding: 0 0 0 5px;
-    border: 1px solid #3F3F3F;
-}
-#mt-panel .mt-lyrics-text:hover {
-    height: auto;
-    width: 290px;
-    max-height: 400px;
-    overflow: scroll;
-    background: none repeat scroll 0 0 black;
-    position: absolute;
-    z-index: 99;
-}
-
-/*#mt-panel #mt-orig-track, #mt-panel #mt-orig-album, #mt-panel #mt-orig-artist {color: white;}*/
-</style>
-
-
-
-
-
 <script type="text/javascript">
-    // _.templateSettings = {
-    //     evaluate: /\<\#(.+?)\#\>/g,
-    //     interpolate: /\{\{=(.+?)\}\}/g,
-    //     escape: /\{\{-(.+?)\}\}/g
-    // };
 
-    var tplData = {
-        mtOrigTrack:    'null',
-        mtTrack:        'null',
-        mtOrigAlbum:    'null',
-        mtAlbum:        'null',
-        mtOrigArtist:   'null',
-        mtArtist:       'null',
+    var mt = {
+        opt: {
+            w:           $(window),
+            panelContId: '#mt-container',
+            panelCont:   '<div id="mt-container" class="mt-container"></div>',
+            tplBody:     '<div id="mt-panel"><table><tr><td><div class="mt-white"><%= mtOrigTrack %></div><div><span><%= mtTrack %></span></div></td></tr><tr><td>by</td></tr><tr><td><div class="mt-white"><%= mtOrigAlbum %></div><div><span><%= mtAlbum %></span></div></td></tr><tr><td>on</td></tr><tr><td><div class="mt-white"><%= mtOrigArtist %></div><div><span><%= mtArtist %></span></div></td></tr></table><table><tr><td><div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div></td></tr><tr><td><div>Chain:<span><%= mtChain %></span></div><div>Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam></div><div>Similar:<span><%= mtSimilar %></span> (from <% _.each(mtSimilarArr, function(item, key, list) { var text = item; if (key != list.length - 1) { text += ","; } %><%= text %><% }) %>)</div></td></tr></table><table><tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr><tr><td><div>Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span><span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, Length:<span><%= mtChars %></span>, </div><div>Title:<span><%= mtLyricsTitle %></span></div><div class="mt-lyrics">Text:<span class="mt-lyrics-text"><%= mtLyricsText %></span></div></td></tr></table><table><tr><td style="width:45px;">Flags:</td><td></td></tr><tr><td>Track</td><td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td></tr><tr><td>Artwork</td><td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td></tr><tr><td>Lyrics</td><td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td></tr><tr><td>Tags</td><td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td></tr><tr><td>Links</td><td>-<span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span></td></tr></table></div>',
+            cssBody:     '<style>#mt-container {position: fixed; right: 10; top: 10;} #mt-panel, #mt-panel table, #mt-panel a {color: #939393; line-height: 11px; font-size: 10px; font-family: "Lucida Console"; /*font-family: "Verdana";*/ } #mt-panel { border: 1px solid blue; width: 330px; height: 300px; background: black; padding: 4px; } #mt-panel table {width: 100%; border-collapse: collapse;} #mt-panel table, #mt-panel .pad-bot {margin-bottom: 6px;} #mt-panel table td {padding: 0;} #mt-panel span, #mt-panel span a {color: #3399FF;} #mt-panel .mt-green {color: #70FF2D;} #mt-panel .mt-red {color: #FF2D2D;} #mt-panel .mt-white {color: white;} #mt-panel .mt-lyrics { height: 22px; } #mt-panel .mt-lyrics-text { cursor: pointer; display: inline-block; height: 22px; width: 290px; overflow: hidden; vertical-align: top; padding: 0 0 0 5px; border: 1px solid #3F3F3F; } #mt-panel .mt-lyrics-text:hover { height: auto; width: 290px; max-height: 400px; overflow: scroll; background: none repeat scroll 0 0 black; position: absolute; z-index: 99;}</style>',
+            tplData:     {
+                mtOrigTrack:        'null',
+                mtTrack:            'null',
+                mtOrigAlbum:        'null',
+                mtAlbum:            'null',
+                mtOrigArtist:       'null',
+                mtArtist:           'null',
+                mtTagsStatus:       'null',
+                mtTagsStatusCls:    'mt-white',
+                mtChain:            'null',
+                mtGenre:            'null',
+                mtNum:              'null',
+                mtYear:             'null',
+                mtBpm:              'null',
+                mtSimilar:          'null',
+                mtSimilarArr:       [''],
+                mtLyricsStatus:     'null',
+                mtLyricsStatusCls:  'mt-white',
+                mtXmlUrl:           '#',
+                mtPageUrl:          '#',
+                mtChars:            'null',
+                mtLyricsTitle:      'null',
+                mtLyricsText:       'null',
+                mtFlagsTrack:       'null',
+                mtFlagsTrackCls:    'mt-white',
+                mtFlagsArt:         'null',
+                mtFlagsArtCls:      'mt-white',
+                mtFlagsLyrics:      'null',
+                mtFlagsLyricsCls:   'mt-white',
+                mtFlagsArt2:        'null',
+                mtFlagsArt2Cls:     'mt-white',
+                mtFlagsLyrics2:     'null',
+                mtFlagsLyrics2Cls:  'mt-white',
+                mtFlagsTags:        'null',
+                mtFlagsTagsCls:     'mt-white',
+                mtFlagsTags2:       'null',
+                mtFlagsTags2Cls:    'mt-white',
+                mtDir:              '#',
+                mtTrackDir:         '#',
+                mtAtDir:            '#',
+                mtLyricsDir:        '#',
+            },
 
-        mtTagsStatus:   'null',
-        mtTagsStatusCls: 'mt-white',
+            parsedData:  {},
+        },
 
-        mtChain:        'null',
-        mtGenre:        'null',
-        mtNum:          'null',
-        mtYear:         'null',
-        mtBpm:          'null',
-        mtSimilar:      'null',
-        mtSimilarArr:   [''],
-        mtLyricsStatus: 'null',
-        mtLyricsStatusCls: 'mt-white',
 
-        mtXmlUrl:       '#',
-        mtPageUrl:      '#',
-        mtChars:        'null',
-        mtLyricsTitle:  'null',
-        mtLyricsText:   'null',
+        init: function() {
+            var _this = this;
 
-        mtFlagsTrack:       'null',
-        mtFlagsTrackCls:    'mt-white',
-        mtFlagsArt:         'null',
-        mtFlagsArtCls:      'mt-white',
-        mtFlagsLyrics:      'null',
-        mtFlagsLyricsCls:   'mt-white',
-        mtFlagsArt2:        'null',
-        mtFlagsArt2Cls:     'mt-white',
-        mtFlagsLyrics2:     'null',
-        mtFlagsLyrics2Cls:  'mt-white',
-        mtFlagsTags:        'null',
-        mtFlagsTagsCls:     'mt-white',
-        mtFlagsTags2:       'null',
-        mtFlagsTags2Cls:    'mt-white',
+            // Insert panel-container tag
+            if ( $( '#mt-container' ).length == 0 ) {
+                $( 'body' ).append( _this.opt.panelCont );
+                $( 'head' ).append( _this.opt.cssBody );
+            }
+        },
 
-        mtDir:              '#',
-        mtTrackDir:         '#',
-        mtAtDir:            '#',
-        mtLyricsDir:        '#',
+        updatePanel: function( parsedData ) {
+            var _this   = this;
+
+            tplData = $.extend( true, {}, _this.opt.tplData, parsedData ) ;
+            tpl     = _.template( _this.opt.tplBody );
+            mtPanel = tpl(tplData);
+
+            $( _this.opt.panelContId ).html( mtPanel );
+
+            return _this;
+        },
+
+        // setParsedData: function( parsedData ) {
+        //     var _this = this;
+        //     _this.opt.parsedData = parsedData;
+        // },
+        
     };
 
-    var tplBody        = '\
-    <div id="mt-panel">\
-        <table>\
-            <tr><td>\
-                <div class="mt-white"><%= mtOrigTrack %></div>\
-                <div><span><%= mtTrack %></span></div>\
-            </td></tr>\
-            <tr><td>by</td></tr>\
-            <tr><td>\
-                <div class="mt-white"><%= mtOrigAlbum %></div>\
-                <div><span><%= mtAlbum %></span></div>\
-            </td></tr>\
-            <tr><td>on</td></tr>\
-            <tr><td>\
-                <div class="mt-white"><%= mtOrigArtist %></div>\
-                <div><span><%= mtArtist %></span></div>\
-            </td></tr>\
-        </table>\
-        <table>\
-            <tr><td>\
-                <div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div>\
-            </td></tr>\
-            <tr><td>\
-                <div>Chain:<span><%= mtChain %></span></div>\
-                <div>\
-                    Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, \
-                    Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam>\
-                </div>\
-                <div>\
-                    Similar:<span><%= mtSimilar %></span> (from \
-                    <% _.each(mtSimilarArr, function(item, key, list) { \
-                        var text = item;\
-                        if (key != list.length - 1) {\
-                            text += ",";\
-                        }\
-                        %><%= text %><% \
-                    }) %>)\
-                </div>\
-            </td></tr>\
-        </table>\
-        <table>\
-            <tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr>\
-            <tr><td>\
-                <div>\
-                    Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span>\
-                           <span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, \
-                    Length:<span><%= mtChars %></span>, \
-                </div>\
-                <div>\
-                    Title:<span><%= mtLyricsTitle %></span>\
-                </div>\
-                <div class="mt-lyrics">\
-                    Text:<span class="mt-lyrics-text"><%= mtLyricsText %></span>\
-                </div>\
-            </td></tr>\
-        </table>\
-        <table>\
-            <tr><td style="width:45px;">Flags:</td><td></td></tr>\
-            <tr>\
-                <td>Track</td>\
-                <td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td>\
-            </tr>\
-            <tr>\
-                <td>Artwork</td>\
-                <td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td>\
-            </tr>\
-            <tr>\
-                <td>Lyrics</td>\
-                <td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td>\
-            </tr>\
-            <tr>\
-                <td>Tags</td>\
-                <td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td>\
-            </tr>\
-            <tr>\
-                <td>Links</td>\
-                <td>-\
-                    <span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, \
-                    <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, \
-                    <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, \
-                    <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span>\
-                </td>\
-            </tr>\
-        </table>\
-    </div>';
 
 
 
-
-    var tplDataParsed = {
+    var parsedData = {
         mtOrigTrack:    'I\'m Not Alone (Deadmau5 Mix)',
         mtTrack:        'I\'m Not Alone (Deadmau5 Mix)',
         mtOrigAlbum:    'Calvin Harris',
@@ -252,17 +138,9 @@
         mtLyricsDir:        '#',
     };
 
-    tplData = $.extend(tplData, tplDataParsed);
-
-
-
-
-
-
     $(function() {
-        var template = _.template( tplBody );
-        var mtPanel  = template(tplData);
-        $('#mt-container').html(mtPanel);
+        mt.init();
+        mt.updatePanel( parsedData );
     });
 </script>
 
@@ -271,183 +149,6 @@
 
 
 
-
-<div id="mt-container"></div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!--
-<script type="text/template" id="mt-panel-tpl">
-    <div id="mt-panel">
-        <table>
-            <tr><td>
-                <div class="mt-white"><%= mtOrigTrack %></div>
-                <div><span><%= mtTrack %></span></div>
-            </td></tr>
-            <tr><td>by</td></tr>
-            <tr><td>
-                <div class="mt-white"><%= mtOrigAlbum %></div>
-                <div><span><%= mtAlbum %></span></div>
-            </td></tr>
-            <tr><td>on</td></tr>
-            <tr><td>
-                <div class="mt-white"><%= mtOrigArtist %></div>
-                <div><span><%= mtArtist %></span></div>
-            </td></tr>
-        </table>
-        <table>
-            <tr><td>
-                <div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div>
-            </td></tr>
-            <tr><td>
-                <div>Chain:<span><%= mtChain %></span></div>
-                <div>
-                    Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, 
-                    Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam>
-                </div>
-                <div>
-                    Similar:<span><%= mtSimilar %></span> (from 
-                    <% _.each(mtSimilarArr, function(item, key, list) { 
-                        var text = item;
-                        if (key != list.length - 1) {
-                            text += ",";
-                        }
-                        %><%= text %><% 
-                    }) %>)
-                </div>
-            </td></tr>
-        </table>
-        <table>
-            <tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr>
-            <tr><td>
-                <div>
-                    Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span>
-                           <span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, 
-                    Length:<span><%= mtChars %></span>, 
-                </div>
-                <div>
-                    Title:<span><%= mtLyricsTitle %></span>
-                </div>
-                <div>
-                    Text:<span><%= mtLyricsText %></span>
-                </div>
-            </td></tr>
-        </table>
-        <table>
-            <tr><td style="width:45px;">Flags:</td><td></td></tr>
-            <tr>
-                <td>Track</td>
-                <td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td>
-            </tr>
-            <tr>
-                <td>Artwork</td>
-                <td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td>
-            </tr>
-            <tr>
-                <td>Lyrics</td>
-                <td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td>
-            </tr>
-            <tr>
-                <td>Tags</td>
-                <td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td>
-            </tr>
-            <tr>
-                <td>Links</td>
-                <td>-
-                    <span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, 
-                    <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, 
-                    <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, 
-                    <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span>
-                </td>
-            </tr>
-        </table>
-    </div>
-</script>
-
-<div id="mt-panel">
-    <table>
-        <tr><td>
-            <div id="mt-orig-track">I'm Not Alone (Deadmau5 Mix)</div>
-            <div><span id="mt-track">I'm Not Alone (Deadmau5 Mix)</span></div>
-        </td></tr>
-        <tr><td>by</td></tr>
-        <tr><td>
-            <div id="mt-orig-album">Calvin Harris</div>
-            <div><span id="mt-album">Calvin Harris</span></div>
-        </td></tr>
-        <tr><td>on</td></tr>
-        <tr><td>
-            <div id="mt-orig-artist">I'm Not Alone (Single)</div>
-            <div><span id="mt-artist">I'm Not Alone (Single)</span></div>
-        </td></tr>
-    </table>
-    <table>
-        <tr><td>Tags: <span id="mt-status-tags"><span class="mt-green">Success</span></span></td></tr>
-        <tr><td>
-            <div>Chain:<span id="mt-chain">Alternative & Punk->Trance->Trance</span></div>
-            <div>
-                Genre:<span id="mt-genre">Alternative & Punk</span>, №:<span id="mt-num">1</span>, 
-                Y:<span id="mt-year">2013</span>, BPM:<span id="mt-bpm">120</spam>
-            </div>
-            <div>Similar:<span id="mt-similar">93</span>% (from 65,77,93)</div>
-        </td></tr>
-    </table>
-    <table>
-        <tr><td>Lyrics: <span id="mt-status-tags"><span class="mt-green">Success</span></span></td></tr>
-        <tr><td>
-            <div>
-                Links:<span id="mt-xml-url"><a  target="_blank" href="">[XML page]</a></span>
-                <span id="mt-page-url"><a target="_blank" href="">[Lyrics page]</a></span>, 
-                Length:<span id="mt-chars">1281/40</span>, 
-            </div>
-            <div>
-                Title:<span id="mt-lyrics-title">Calvin Harris:I'm Not Alone (Deadmau5 Mix)</span>
-            </div>
-            <div>
-                Text:<span id="mt-lyrics-text">Some Lyrics Text</span>
-            </div>
-        </td></tr>
-    </table>
-    <table>
-        <tr><td style="width:45px;">Flags:</td><td></td></tr>
-        <tr>
-            <td>Track</td>
-            <td>- <span id="mt-info-track"><span class="mt-green">Stored</span></span></td>
-        </tr>
-        <tr>
-            <td>Artwork</td>
-            <td>- <span id="mt-info-art"><span class="mt-green">Stored</span>, <span class="mt-green">Embed</span></span></td>
-        </tr>
-        <tr>
-            <td>Lyrics</td>
-            <td>- <span id="mt-info-lyric"><span class="mt-red">Stored</span>, <span class="mt-red">Embed</span></span></td>
-        </tr>
-        <tr>
-            <td>Tags</td>
-            <td>- <span id="mt-info-tags"><span class="mt-green">Parsed</span>, <span class="mt-green">Embed</span></span></td>
-        </tr>
-        <tr>
-            <td>Links</td>
-            <td>-
-                <span id="mt-dir"><a href="" target="_blank">[DIR]</a></span>, 
-                <span id="mt-track-dir"><a href="" target="_blank">[Track]</a></span>, 
-                <span id="mt-art-dir"><a href="" target="_blank">[Artwork]</a></span>, 
-                <span id="mt-lyrics-dir"><a href="" target="_blank">[Lyrics file]</a></span>
-            </td>
-        </tr>
-    </table>
-</div>
--->
 
 
 <?php
