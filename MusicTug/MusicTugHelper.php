@@ -238,6 +238,7 @@ class MusicTugHelper
 
         $json = json_encode($jsonResponse);
 
+        header('Content-Type: application/json');
         echo $json;
         exit;
     }
