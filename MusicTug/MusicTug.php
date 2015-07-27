@@ -179,7 +179,7 @@ class MusicTug
 
         // Tags stream ///////////////
         //////////////////////////////
-        if ($this->_config[embedTags]) { // TODO : Уточнить условия, когда парсить тэги !
+        if ($this->_config[embedTags]) { // TODO: Уточнить условия, когда парсить тэги !
             if ($this->_config[parseTags]) {
                 $this->_stream[tags] = $this->getTagsStream();
             } else {
@@ -245,7 +245,85 @@ class MusicTug
 
         MusicTugHelper::log("Done in {$this->_time[total]} sec", 'init');
 
-        return true;
+
+
+        $response[trackData] = array(
+            title      => $this->_title,
+            album      => $this->_album,
+            artist     => $this->_artist,
+            trackUrl   => $this->_artworkUrl,
+            artworkUrl => $this->_trackUrl,
+        );
+
+        foreach ($this->_tmp[tagsStream] as $tmpTagsStream) {
+            $response[tagsStream][] = array(
+                origin  => $tmpTagsStream[origin],
+                opt     => $tmpTagsStream[opt],
+                similarIndex => $tmpTagsStream[similarIndex],
+                meta    => array(
+                    title  => $tmpTagsStream[meta][title],
+                    album  => $tmpTagsStream[meta][album],
+                    artist => $tmpTagsStream[meta][artist],
+                ),
+            );
+
+            // Make similarStr
+            if ($similarStr) {
+                $similarStr .= ',';
+            }
+            $similarStr .= $tmpTagsStream[similarIndex];
+        }
+
+        $response[tags] = array(
+            success      => (bool)$this->_stream[tags][meta],
+            chain        => $this->_stream[tags][meta][TR_GENRE],
+            genre        => $this->_stream[tags][meta][genre],
+            track        => $this->_stream[tags][meta][track],
+            date         => $this->_stream[tags][meta][date],
+            tempo        => $this->_stream[tags][meta][tempo],
+            similarIndex => $this->_stream[tags][similarIndex],
+            similarStr   => $similarStr,
+        );
+
+        $response[lyrics] = array(
+            success => (bool)$this->_stream[lyrics],
+            xmlUrl  => $this->_stream[lyrics][requestUrl],
+            textUrl => $this->_stream[lyrics][pageUrl],
+            chars   => $this->_stream[lyrics][chars],
+            rows    => $this->_stream[lyrics][rows],
+            header  => $this->_stream[lyrics][header],
+            lyrics  => $this->_stream[lyrics][lyrics],
+        );
+
+        /*
+        $response[flags] = array(
+            success => true,    
+            track   => array(
+                stored => true
+            ),
+            artwork => array(
+                stored => true,
+                embed  => true
+            ),
+            lyrics  => array(
+                stored => false,
+                embed  => false
+            ),
+            tags    => array(
+                stored => true,
+                embed  => true
+            ),
+        );
+        */
+
+        $response[links] = array(
+            path    => $this->_path[absolute],
+            track   => $this->_path[trackAbs],
+            artwork => $this->_path[artwork],
+            lyrics  => $this->_path[lyrics],
+        );
+
+        return $response;
     }
 
 

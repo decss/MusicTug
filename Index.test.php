@@ -152,8 +152,8 @@ $response[lyrics] = array(
     textUrl => 'textUrl',
     chars   => '1281',
     rows    => '40',
-    title   => 'Calvin Harris:Im Not Alone (Deadmau5 Mix)',
-    text    => 'Some Lyrics Text',
+    header  => 'Calvin Harris:Im Not Alone (Deadmau5 Mix)',
+    lyrics  => 'Some Lyrics Text',
 );
 
 $response[flags] = array(
@@ -176,7 +176,7 @@ $response[flags] = array(
 );
 
 $response[links] = array(
-    dir     => 'dir',
+    path    => 'dir',
     track   => 'track',
     artwork => 'artwork',
     lyrics  => 'lyrics',

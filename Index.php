@@ -7,14 +7,14 @@ require_once 'Include/Config.php';
 
 
 $trackData = array(
-    /**/
+    /** /
     'title'      => 'Кокать лампочки',
     'album'      => 'ф',
     'artist'     => 'Ландыши',
     'trackUrl'   => 'http://s8.pleer.com/0042fdbee17d4b9d6f20cae4c501ab68ceece848791c693523a6873b78e93ba17cfa4d332c325369afb37342d48b3ea4eb540cc8e66bcffa1cd747e264ef33dad9c87838203d134557fafa558f0def0b3605c1/1364103b5b.mp3',
     'artworkUrl' => '',
 
-    /** /
+    /**/
     'title'      => 'Lost In Hollywood',
     'album'      => 'Mezmerize',
     'artist'     => 'System Of A Down',
@@ -39,7 +39,10 @@ $options = array();
 
 
 $musicTug = new MusicTug($trackData, $options);
-$musicTug->init();
+$response = $musicTug->init();
+
+dbg($response);
+
 // $l[] = $musicTug->getTagsStream();
 // $l[] = $musicTug->getLyricsStream();
 // $l[] = $musicTug->getArtworkStream();
