@@ -1,0 +1,59 @@
+[33mcommit 97e9b766627d0c13740aa6982a021e7943db1d94[m
+Author: decss <decss@miromax.org>
+Date:   Fri Mar 6 14:03:39 2015 +0400
+
+    CHANGE: dirLock functions rebased to MusicTugHelper, ADD: testGracenote(), jsonResponse(), comments to methods
+
+[33mcommit 7ca31c2636dd98bbd5302329716422133ab35863[m
+Author: unknown <decss.j@gmail.com>
+Date:   Sun Nov 9 15:09:46 2014 +0400
+
+    ADD: lockDir(), unlockDir(), _isLockedDir() methods, pid in log
+
+[33mcommit 465b3a57d473cc7f599a8c979049212ab7bce252[m
+Author: unknown <decss.j@gmail.com>
+Date:   Sat Nov 8 22:50:28 2014 +0400
+
+    ADD: log messages improved, log levels, exec time calculation
+
+[33mcommit 79bdc03bab963c429e32322ff5e513e3d118cee6[m
+Author: unknown <decss.j@gmail.com>
+Date:   Fri Nov 7 02:37:25 2014 +0400
+
+    ADD: Log method, logging of some actions
+
+[33mcommit e15f0876c96070df0903c725078686835a394de8[m
+Author: unknown <decss.j@gmail.com>
+Date:   Thu Nov 6 19:57:07 2014 +0400
+
+    minor config renaming
+
+[33mcommit 60e3e5ce914b0064271d8ce189ce744a6aa71546[m
+Author: unknown <decss.j@gmail.com>
+Date:   Thu Nov 6 01:53:12 2014 +0400
+
+    FIX: $_flag removed, ::init() logic simplified. NEW: add _execShell() (not completed), typos
+
+[33mcommit fdebe21e7112671ecd650ec79604afc3bf9c3513[m
+Author: unknown <decss.j@gmail.com>
+Date:   Wed Nov 5 00:37:21 2014 +0400
+
+    FIX: MusicTug::init() logic issue
+
+[33mcommit 43da7a120fe64e0f5b429cf136faec7f869104e0[m
+Author: unknown <decss.j@gmail.com>
+Date:   Wed Nov 5 00:08:40 2014 +0400
+
+    CHANGE: MusicTug::init method ligic simplify
+
+[33mcommit 6b5cbef76f1f57da4f21f423a4312dcab58a24d0[m
+Author: unknown <decss.j@gmail.com>
+Date:   Mon Nov 3 23:19:12 2014 +0400
+
+    Add: MusicTug.js empty file, gm/tm plugin will be here
+
+[33mcommit 70daf0c6b78bfe359bee2433b4aaa114c911e712[m
+Author: unknown <decss.j@gmail.com>
+Date:   Mon Nov 3 23:13:50 2014 +0400
+
+    First commit

@@ -1,6 +1,32 @@
+<?php
+
+if ($_GET[action]) {
+    define('MT_CONFIG_FILE', 'Index.config.php');
+    require_once 'Include/Config.php';
+
+    if ($_GET[action] == 'here?') {
+        $jsonAnswer = array(answer => 'yes');
+        MusicTugHelper::jsonResponse('success', $jsonAnswer);
+    }
+
+    exit;
+}
+
+?>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script type="text/javascript" src="http://underscorejs.org/underscore-min.js"></script>
 <script type="text/javascript" src="https://raw.github.com/jbrooksuk/jQuery-Timer-Plugin/master/jquery.timer.js"></script>
+<style type="text/css">
+    #mt-container #mt-current {
+        border-top: 1px solid #3f3f3f;
+        border-bottom: 1px solid #3f3f3f;
+        padding-top: 4px;
+    }
+    #mt-container button {
+        font-size: 10px;
+        cursor: pointer;
+    }
+</style>
 
 
 <script type="text/javascript">
@@ -8,13 +34,19 @@
     var mt = {
         opt: {
             _w:             $(window),
-            _panelCont:     '<div id="mt-container" class="mt-container"> <div id="mt-panel"></div> <div id="mt-status"></div> </div>',
+            _url:           'http://deploy.local/MusicTug/index.php',
+            _panelCont:     '<div id="mt-container" class="mt-container">  <div id="mt-panel"></div>  <div id="mt-current"></div>  <div id="mt-status"></div>  </div>',
+
             _infoId:        '#mt-panel',
-            _infoTpl:       '<table><tr><td><div class="mt-white"><%= mtOrigTrack %></div><div><span><%= mtTrack %></span></div></td></tr><tr><td>by</td></tr><tr><td><div class="mt-white"><%= mtOrigAlbum %></div><div><span><%= mtAlbum %></span></div></td></tr><tr><td>on</td></tr><tr><td><div class="mt-white"><%= mtOrigArtist %></div><div><span><%= mtArtist %></span></div></td></tr></table><table><tr><td><div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div></td></tr><tr><td><div>Chain:<span><%= mtChain %></span></div><div>Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam></div><div>Similar:<span><%= mtSimilar %></span> (from <% _.each(mtSimilarArr, function(item, key, list) { var text = item; if (key != list.length - 1) { text += ","; } %><%= text %><% }) %>)</div></td></tr></table><table><tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr><tr><td><div>Title:<span><%= mtLyricsTitle %></span></div><div>Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span><span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, Length:<span><%= mtChars %></span>, </div><div class="mt-lyrics">Text:<span class="mt-lyrics-text"><%= mtLyricsText %></span></div></td></tr></table><table><tr><td style="width:45px;">Flags:</td><td></td></tr><tr><td>Track</td><td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td></tr><tr><td>Artwork</td><td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td></tr><tr><td>Lyrics</td><td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td></tr><tr><td>Tags</td><td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td></tr><tr><td>Links</td><td>-<span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span></td></tr></table>'
-                            + '</div>',
+            _infoTpl:       '<table><tr><td><div class="mt-white"><%= mtOrigTrack %></div><div><span><%= mtTrack %></span></div></td></tr><tr><td>by</td></tr><tr><td><div class="mt-white"><%= mtOrigAlbum %></div><div><span><%= mtAlbum %></span></div></td></tr><tr><td>on</td></tr><tr><td><div class="mt-white"><%= mtOrigArtist %></div><div><span><%= mtArtist %></span></div></td></tr></table><table><tr><td><div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div></td></tr><tr><td><div>Chain:<span><%= mtChain %></span></div><div>Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam></div><div>Similar:<span><%= mtSimilar %></span> (from <% _.each(mtSimilarArr, function(item, key, list) { var text = item.similar; if (key != list.length - 1) { text += ","; } %><%= text %><% }) %>)</div></td></tr></table><table><tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr><tr><td><div>Title:<span><%= mtLyricsTitle %></span></div><div>Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span><span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, Length:<span><%= mtChars %></span>, </div><div class="mt-lyrics">Text:<span class="mt-lyrics-text"><%= mtLyricsText %></span></div></td></tr></table><table><tr><td style="width:45px;">Flags:</td><td></td></tr><tr><td>Track</td><td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td></tr><tr><td>Artwork</td><td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td></tr><tr><td>Lyrics</td><td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td></tr><tr><td>Tags</td><td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td></tr><tr><td>Links</td><td>- <span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span></td></tr></table></div>',
+
+            _buttonsId:     '#mt-current',
+            _buttonsTpl:    '<table> <!-- <tr><td>Current:</td></tr><tr><td><%= title %> <span>by</span> <%= artist %> <span>on</span> <%= album %></td></tr> --> <tr><td><button>track</button> <button>download</button></td></tr></table>',
+
             _statusId:      '#mt-status',
-            _statusTpl:     '<div><%= status %></div>',
-            _cssBody:       '<style>#mt-container {position: fixed; right: 10; top: 10;} #mt-container, #mt-container table, #mt-container a {color: #939393; line-height: 11px; font-size: 10px; font-family: "Lucida Console"; /*font-family: "Verdana";*/ } #mt-container { border: 1px solid blue; width: 330px; height: 300px; background: black; padding: 4px; } #mt-container table {width: 100%; border-collapse: collapse;} #mt-container table, #mt-container .pad-bot {margin-bottom: 6px;} #mt-container table td {padding: 0;} #mt-container span, #mt-container span a {color: #3399FF;} #mt-container .mt-green {color: #70FF2D;} #mt-container .mt-red {color: #FF2D2D;} #mt-container .mt-white {color: white;} #mt-container .mt-lyrics { height: 22px; } #mt-container .mt-lyrics-text { cursor: pointer; display: inline-block; height: 22px; width: 290px; overflow: hidden; vertical-align: top; padding: 0 0 0 5px; border: 1px solid #3F3F3F; } #mt-container .mt-lyrics-text:hover { height: auto; width: 290px; max-height: 400px; overflow: scroll; background: none repeat scroll 0 0 black; position: absolute; z-index: 99;} #mt-container #mt-status {position:absolute; bottom: 0; left: 0; right: 0; margin: 0; background: #1F1F1F; padding: 1px 4px;} </style>',
+            _statusTpl:     '<div class="<%= cls %>"><%= status %></div>',
+
+            _cssBody:       '<style>#mt-container {position: fixed; right: 10; top: 10;} #mt-container, #mt-container table, #mt-container a {color: #939393; line-height: 11px; font-size: 10px; font-family: "Lucida Console"; /*font-family: "Verdana";*/ } #mt-container { border: 1px solid blue; width: 330px; height: 360px; background: black; padding: 4px; } #mt-container table {width: 100%; border-collapse: collapse;} #mt-container table, #mt-container .pad-bot {margin-bottom: 6px;} #mt-container table td {padding: 0;} #mt-container span, #mt-container span a {color: #3399FF;} #mt-container .mt-green {color: #70FF2D;} #mt-container .mt-red {color: #FF2D2D;} #mt-container .mt-white {color: white;} #mt-container .mt-lyrics { height: 22px; } #mt-container .mt-lyrics-text { cursor: pointer; display: inline-block; height: 22px; width: 290px; overflow: hidden; vertical-align: top; padding: 0 0 0 5px; border: 1px solid #3F3F3F; } #mt-container .mt-lyrics-text:hover { height: auto; width: 290px; max-height: 400px; overflow: scroll; background: none repeat scroll 0 0 black; position: absolute; z-index: 99;} #mt-container #mt-status {position:absolute; bottom: 0; left: 0; right: 0; margin: 0; background: #1F1F1F; padding: 1px 4px;} </style>',
             _tplData:       {
                 mtOrigTrack:        'null',
                 mtTrack:            'null',
@@ -30,7 +62,7 @@
                 mtYear:             'null',
                 mtBpm:              'null',
                 mtSimilar:          'null',
-                mtSimilarArr:       [''],
+                mtSimilarArr:       {},
                 mtLyricsStatus:     'null',
                 mtLyricsStatusCls:  'mt-white',
                 mtXmlUrl:           '#',
@@ -59,9 +91,16 @@
             },
 
             _timer:         null,
+            _serverStatus:  'down',
 
+            requestData:    {
+                title:      null,
+                album:      null,
+                artist:     null,
+                trackUrl:   null,
+                artworkUrl: null,
+            },
             parsedData:     {},
-            request:        {},
         },
 
 
@@ -76,6 +115,14 @@
 
             // Change status
             _this.updateStatus( 'Initializing...' );
+
+            timerCallback = function() {
+                // Check server status
+                _this._checkServer();
+            };
+
+            // Start main timer
+            _this.timerStart( 3000, timerCallback );
 
 
             return _this;
@@ -92,10 +139,27 @@
 
             return _this;
         },
-        updateStatus: function( status )  {
+        updateCurrent: function() {
             var _this = this;
 
-            tplData   = {status: status};
+            tplData   = {
+                title: _this.opt.requestData.title,
+                album: _this.opt.requestData.album,
+                artist: _this.opt.requestData.artist,
+            };
+            tpl       = _.template( _this.opt._buttonsTpl );
+            mtCurrent = tpl(tplData);
+            $( _this.opt._buttonsId ).html( mtCurrent );
+
+            return _this;
+        },
+        updateStatus: function( status, options )  {
+            var _this = this;
+
+            tplData   = {
+                status: status,
+                cls:    (options && options.cls) ? options.cls : null,
+            };
             tpl       = _.template( _this.opt._statusTpl );
             mtStatus  = tpl(tplData);
             $( _this.opt._statusId ).html( mtStatus );
@@ -113,12 +177,17 @@
             return _this.opt[variable];
         },
 
-        timerStart: function( delay ) {
+        timerStart: function( delay, timerCallback ) {
             var _this = this;
-            delay = ( !delay ) ? 3000 : delay;
+            delay     = ( !delay ) ? 3000 : delay;
             _this.timerStop();
             _this.opt._timer = $.timer(delay, function() {
                 _this.log( 'timer fire' );
+
+                // run timer callback
+                if ( timerCallback ) {
+                    timerCallback();
+                }
             });
         },
         timerStop: function() {
@@ -126,6 +195,22 @@
             if (_this.opt._timer) {
                 _this.opt._timer.stop();
             }
+        },
+
+
+        _checkServer: function() {
+            var _this = this;
+
+            _this._serverStatus = 'down';
+            // _this.updateStatus( 'Checking server status...' );
+            $.get( _this.opt._url, {action: 'here?'}, function( response ){
+                if ( response && response.status == 'success' && response.data.answer == 'yes' ) {
+                    _this.updateStatus( 'Server UP', {cls: 'mt-green'} );
+                    _this._serverStatus = 'up';
+                } else {
+                    _this.updateStatus( 'Server DOWN', {cls: 'mt-red'}  );
+                }
+            });
         },
 
 
@@ -159,7 +244,12 @@
         mtYear:         '2013',
         mtBpm:          '120',
         mtSimilar:      '93%',
-        mtSimilarArr:   [65, 77, 93],
+        mtSimilarArr:   [
+            {similar: 65},
+            {similar: 77},
+            {similar: 93},
+        ],
+
         mtLyricsStatus: 'Success',
         mtLyricsStatusCls: 'mt-green',
 
@@ -198,9 +288,10 @@
             trackUrl:       'http://s8.pleer.com/0042febeb87d1dcc6f20cbe7c90ea364ceece84879809d8bf71954cb8b4ad11d994b87332c32ca955f54cc8d246c8e4f4ef8776831de1a588e64975f8710d97a50/cb97e736e8.mp3',
             artworkUrl:     'http://3.avatars.yandex.net/get-music-content/5560c9b4.a.1606291-1/200x200',
         }
-        mt.value( 'request', {} );
+        mt.value( 'requestData', request );
         mt.init();
         mt.updateInfo( parsedData );
+        mt.updateCurrent(  );
     });
 </script>
 
