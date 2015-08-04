@@ -3,7 +3,7 @@
  * Config file
  */
 
-error_reporting(E_ALL ^E_NOTICE ^E_DEPRECATED);
+error_reporting(E_ALL ^E_NOTICE ^E_DEPRECATED ^E_WARNING);
 set_time_limit(300);
 
 /*

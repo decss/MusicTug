@@ -1,11 +1,104 @@
 <?php
+// TODO: remove "parseLyrics" config option
+
+
+define('MT_CONFIG_FILE', 'Index.config.php');
+require_once 'Include/Config.php';
+
+
+$trackData = array(
+    'title'      => 'Hey Now',
+    'album'      => 'If You Wait',
+    'artist'     => 'London Grammar',
+    // 'trackUrl'   => 'http://elisto04d.music.yandex.ru/get-mp3/07bf38af482ec38b2c6dce5f51fa7626/506963ade3b08/34/data-0.12:38452698079:4973504?track-id=14671865&play=false&experiments=%7B%22similarities%22%3A%22default%22%2C%22genreRadio%22%3A%22new-ichwill%22%2C%22newMusic%22%3A%22no%22%2C%22recommendedArtists%22%3A%22ichwill_similar_artists%22%2C%22recommendedTracks%22%3A%22recommended_tracks_by_artist_from_history%22%2C%22recommendedAlbumsOfFavoriteGenre%22%3A%22recent%22%2C%22recommendedSimilarArtists%22%3A%22default%22%2C%22recommendedArtistsWithArtistsFromHistory%22%3A%22default%22%2C%22adv%22%3A%22a%22%2C%22myMusicButton%22%3A%22yes%22%7D&from=web-artist_albums-album-track-fridge&albumId=1606291',
+    'trackUrl'   => 'http://s8.pleer.com/0042febeb87d1dcc6f20cbe7c90ea364ceece84879809d8bf71954cb8b4ad11d994b87332c32ca955f54cc8d246c8e4f4ef8776831de1a588e64975f8710d97a50/cb97e736e8.mp3',
+    'artworkUrl' => 'http://3.avatars.yandex.net/get-music-content/5560c9b4.a.1606291-1/200x200',
+    
+    // 'trackUrl'   => 'http://t1-2.p-cdn.com/access/?version=4&lid=946783457&token=cqf%2Bh%2BdUKV1%2BM4GARZanyUV%2BXk6ZfdmDfSeUE90%2ByDaT%2FaFexRhOhSxZD0qA28G351vbJgiKhv3303dABMMyvwZZSC0sj5MUMUTQujGHkoU29CGoniWCTX9zNILTE7puwclRvXOpA3nDGD1eWpbC0wtEIk6z1onkPn7EFtt2gPXZ7dvyfMZcPKwPF9e2nmzU3MFeS6s4TieSNbbWz1vsgXjjwlMQQFZ0jUOPbHpbD3h7h9Ih55bRksx1BD16Kab3Zb89Xcr%2BSRbnGl41NsbhhbJiD8uYI92pOoliu9KNK5XuyE1ffDJqHqdDHLlONo1XAoJIYPMhmK1ht9GHymUsZJHv8U0jR7ZZ%2FRl17DSineIzMB0%2FaIfCaEj0ms8cAjIS',
+    // 'artworkUrl' => 'http://cont-dc6-2.pandora.com/images/public/amz/2/6/1/5/800015162_500W_500H.jpg',
+    // 'artworkUrl' => 'http://www.queness.com/resources/images/png/apple_ex.png',
+    // 'artworkUrl' => 'http://www.newyorker.com/wp-content/uploads/2012/12/Gif-1.gif',
+
+    // 'title'      => 'Confusion (Instrumental)',
+    // 'title'      => 'Confusion',
+    // 'artist'     => 'New Order',
+);
+
 
 if ($_GET[action]) {
-    define('MT_CONFIG_FILE', 'Index.config.php');
-    require_once 'Include/Config.php';
 
-    if ($_GET[action] == 'here?') {
+    if ($_GET[action] == 'here') {
         $jsonAnswer = array(answer => 'yes');
+        MusicTugHelper::jsonResponse('success', $jsonAnswer);
+    
+
+    } elseif($_GET[action] == 'track') {
+
+        $options        = array();
+        $musicTug       = new MusicTug($trackData, $options);
+        $tagsStream     = $musicTug->getTagsStream('best');
+        $tagsArray      = $musicTug->getTagsStream('all');
+        $lyricsStream   = $musicTug->getLyricsStream();
+        // $l          = $musicTug->getArtworkStream();
+        // $l          = $musicTug->getTrackStream();
+
+        $tagsSimilarArray = array();
+        foreach ($tagsArray as $value) {
+            $tagsSimilarArray[][similar] = $value[similarIndex];
+        }
+
+        $jsonAnswer = array(
+            mtOrigTrack         => $musicTug->getPrivate('_title'),
+            mtTrack             => $tagsStream[meta][title],
+            mtOrigAlbum         => $musicTug->getPrivate('_album'),
+            mtAlbum             => $tagsStream[meta][album],
+            mtOrigArtist        => $musicTug->getPrivate('_artist'),
+            mtArtist            => $tagsStream[meta][artist],
+            mtTagsStatus        => ($tagsStream[success] ? 'Success' : 'Fail'),
+            mtTagsStatusCls     => ($tagsStream[success] ? 'mt-green' : 'mt-red'),
+            mtChain             => $tagsStream[meta][TR_GENRE],
+            mtGenre             => $tagsStream[meta][genre],
+            mtNum               => $tagsStream[meta][track],
+            mtYear              => $tagsStream[meta][date],
+            mtBpm               => $tagsStream[meta][tempo],
+            mtSimilar           => $tagsStream[similarIndex],
+            mtSimilarArr        => $tagsSimilarArray,
+
+            mtLyricsStatus      => ($lyricsStream[success] ? 'Success' : 'Fail'),
+            mtLyricsStatusCls   => ($lyricsStream[success] ? 'mt-green' : 'mt-red'),
+            mtXmlUrl            => $lyricsStream[requestUrl],
+            mtPageUrl           => $lyricsStream[pageUrl],
+            mtChars             => $lyricsStream[chars] . '/' . $lyricsStream[rows],
+            mtLyricsTitle       => $lyricsStream[header],
+            mtLyricsText        => nl2br($lyricsStream[lyrics]),
+
+            // mtFlagsTrack        => '',
+            // mtFlagsTrackCls     => '',
+            // mtFlagsArt          => '',
+            // mtFlagsArtCls       => '',
+            // mtFlagsLyrics       => '',
+            // mtFlagsLyricsCls    => '',
+            // mtFlagsArt2         => '',
+            // mtFlagsArt2Cls      => '',
+            // mtFlagsLyrics2      => '',
+            // mtFlagsLyrics2Cls   => '',
+            // mtFlagsTags         => '',
+            // mtFlagsTagsCls      => '',
+            // mtFlagsTags2        => '',
+            // mtFlagsTags2Cls     => '',
+
+            mtDir               => 'file:///' . str_replace(DIR_S, '/', $musicTug->getPrivate('_path')[absolute]),
+            mtTrackDir          => 'file:///' . str_replace(DIR_S, '/', $musicTug->getPrivate('_path')[trackAbs]),
+            mtAtDir             => 'file:///' . str_replace(DIR_S, '/', $musicTug->getPrivate('_path')[artwork]),
+            mtLyricsDir         => 'file:///' . str_replace(DIR_S, '/', $musicTug->getPrivate('_path')[lyrics]),
+        );
+
+        foreach ($jsonAnswer as $key => $value) {
+            if ( empty($jsonAnswer[$key]) ) {
+                unset($jsonAnswer[$key]);
+            }
+        }
+
         MusicTugHelper::jsonResponse('success', $jsonAnswer);
     }
 
@@ -38,15 +131,15 @@ if ($_GET[action]) {
             _panelCont:     '<div id="mt-container" class="mt-container">  <div id="mt-panel"></div>  <div id="mt-current"></div>  <div id="mt-status"></div>  </div>',
 
             _infoId:        '#mt-panel',
-            _infoTpl:       '<table><tr><td><div class="mt-white"><%= mtOrigTrack %></div><div><span><%= mtTrack %></span></div></td></tr><tr><td>by</td></tr><tr><td><div class="mt-white"><%= mtOrigAlbum %></div><div><span><%= mtAlbum %></span></div></td></tr><tr><td>on</td></tr><tr><td><div class="mt-white"><%= mtOrigArtist %></div><div><span><%= mtArtist %></span></div></td></tr></table><table><tr><td><div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div></td></tr><tr><td><div>Chain:<span><%= mtChain %></span></div><div>Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam></div><div>Similar:<span><%= mtSimilar %></span> (from <% _.each(mtSimilarArr, function(item, key, list) { var text = item.similar; if (key != list.length - 1) { text += ","; } %><%= text %><% }) %>)</div></td></tr></table><table><tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr><tr><td><div>Title:<span><%= mtLyricsTitle %></span></div><div>Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span><span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, Length:<span><%= mtChars %></span>, </div><div class="mt-lyrics"><span class="mt-lyrics-text"><%= mtLyricsText %></span></div></td></tr></table><table><tr><td style="width:45px;">Flags:</td><td></td></tr><tr><td>Track</td><td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td></tr><tr><td>Artwork</td><td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td></tr><tr><td>Lyrics</td><td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td></tr><tr><td>Tags</td><td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td></tr><tr><td>Links</td><td>- <span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span></td></tr></table></div>',
+            _infoTpl:       '<table><tr><td><div class="mt-white"><%= mtOrigTrack %></div><div><span><%= mtTrack %></span></div></td></tr><tr><td>by</td></tr><tr><td><div class="mt-white"><%= mtOrigAlbum %></div><div><span><%= mtAlbum %></span></div></td></tr><tr><td>on</td></tr><tr><td><div class="mt-white"><%= mtOrigArtist %></div><div><span><%= mtArtist %></span></div></td></tr></table><table><tr><td><div>Tags: <span class="<%= mtTagsStatusCls %>"><%= mtTagsStatus %></span></div></td></tr><tr><td><div>Chain:<span><%= mtChain %></span></div><div>Genre:<span><%= mtGenre %></span>, №:<span><%= mtNum %></span>, Y:<span><%= mtYear %></span>, BPM:<span><%= mtBpm %></spam></div><div>Similar:<span><%= mtSimilar %></span> (from <span class=""><% _.each(mtSimilarArr, function(item, key, list) { var text = item.similar; if (key != list.length - 1) { text += ","; } %><%= text %><% }) %>)</div></td></tr></table><table><tr><td>Lyrics: <span class="<%= mtLyricsStatusCls %>"><%= mtLyricsStatus %></span></td></tr><tr><td><div>Title:<span><%= mtLyricsTitle %></span></div><div>Links:<span><a target="_blank" href="<%= mtXmlUrl %>">[XML page]</a></span><span><a target="_blank" href="<%= mtPageUrl %>">[Lyrics page]</a></span>, Length:<span><%= mtChars %></span>, </div><div class="mt-lyrics"><span class="mt-lyrics-text mt-white"><%= mtLyricsText %></span></div></td></tr></table><table><tr><td style="width:45px;">Flags:</td><td></td></tr><tr><td>Track</td><td>- <span class="<%= mtFlagsTrackCls %>"><%= mtFlagsTrack %></span></td></tr><tr><td>Artwork</td><td>- <span class="<%= mtFlagsArtCls %>"><%= mtFlagsArt %></span>, <span class="<%= mtFlagsArt2Cls %>"><%= mtFlagsArt2 %></span></td></tr><tr><td>Lyrics</td><td>- <span class="<%= mtFlagsLyricsCls %>"><%= mtFlagsLyrics %></span>, <span class="<%= mtFlagsLyrics2Cls %>"><%= mtFlagsLyrics2 %></span></td></tr><tr><td>Tags</td><td>- <span class="<%= mtFlagsTagsCls %>"><%= mtFlagsTags %></span>, <span class="<%= mtFlagsTags2Cls %>"><%= mtFlagsTags2 %></span></td></tr><tr><td>Links</td><td>- <span><a href="<%= mtDir %>" target="_blank">[DIR]</a></span>, <span><a href="<%= mtTrackDir %>" target="_blank">[Track]</a></span>, <span><a href="<%= mtAtDir %>" target="_blank">[Artwork]</a></span>, <span><a href="<%= mtLyricsDir %>" target="_blank">[Lyrics file]</a></span></td></tr></table></div>',
 
             _buttonsId:     '#mt-current',
-            _buttonsTpl:    '<table> <!-- <tr><td>Current:</td></tr><tr><td><%= title %> <span>by</span> <%= artist %> <span>on</span> <%= album %></td></tr> --> <tr><td><button>track</button> <button>download</button></td></tr></table>',
+            _buttonsTpl:    '<table> <!-- <tr><td>Current:</td></tr><tr><td><%= title %> <span>by</span> <%= artist %> <span>on</span> <%= album %></td></tr> --> <tr><td><button data-action="track">track</button> <button data-action="download">download</button></td></tr></table>',
 
             _statusId:      '#mt-status',
             _statusTpl:     '<div class="<%= cls %>"><%= status %></div>',
 
-            _cssBody:       '<style>#mt-container {position: fixed; right: 10; top: 10;} #mt-container, #mt-container table, #mt-container a {color: #939393; line-height: 11px; font-size: 10px; font-family: "Lucida Console"; /*font-family: "Verdana";*/ } #mt-container { border: 1px solid blue; width: 330px; height: 360px; background: black; padding: 4px; } #mt-container table {width: 100%; border-collapse: collapse;} #mt-container table, #mt-container .pad-bot {margin-bottom: 6px;} #mt-container table td {padding: 0;} #mt-container span, #mt-container span a {color: #3399FF;} #mt-container .mt-green {color: #70FF2D;} #mt-container .mt-red {color: #FF2D2D;} #mt-container .mt-white {color: white;} #mt-container .mt-lyrics { height: 22px; } #mt-container .mt-lyrics-text { cursor: pointer; display: block; height: 21px; width: auto; overflow: hidden; vertical-align: top; padding: 1px 0; border-bottom: 1px solid #3F3F3F; } #mt-container .mt-lyrics-text:hover { height: auto; width: 330px; max-height: 400px; overflow: scroll; background: none repeat scroll 0 0 black; position: absolute; z-index: 99;} #mt-container #mt-status {position:absolute; bottom: 0; left: 0; right: 0; margin: 0; background: #1F1F1F; padding: 1px 4px;} </style>',
+            _cssBody:       '<style>#mt-container {position: fixed; right: 10; top: 10;} #mt-container, #mt-container table, #mt-container a {color: #939393; line-height: 11px; font-size: 10px; font-family: "Lucida Console"; /*font-family: "Verdana";*/ } #mt-container { border: 1px solid blue; width: 330px; height: 360px; background: black; padding: 4px; } #mt-container table {width: 100%; border-collapse: collapse;} #mt-container table, #mt-container .pad-bot {margin-bottom: 6px;} #mt-container table td {padding: 0;} #mt-container span, #mt-container span a {color: #3399FF;} #mt-container .mt-green {color: #70FF2D;} #mt-container .mt-red {color: #FF2D2D;} #mt-container .mt-white {color: white;} #mt-container .mt-gray {color: #939393;} #mt-container .mt-lyrics { height: 27px; } #mt-container .mt-lyrics-text { cursor: pointer; display: block; height: 25px; width: auto; overflow: hidden; vertical-align: top; padding-top: 1px; border-bottom: 1px dashed #3F3F3F; line-height: 12px;} #mt-container .mt-lyrics-text:hover { height: auto; width: 330px; max-height: 400px; overflow: scroll; background: none repeat scroll 0 0 black; position: absolute; z-index: 99; border: none;} #mt-container #mt-status {position:absolute; bottom: 0; left: 0; right: 0; margin: 0; background: #1F1F1F; padding: 1px 4px;} </style>',
             _tplData:       {
                 mtOrigTrack:        'null',
                 mtTrack:            'null',
@@ -116,13 +209,18 @@ if ($_GET[action]) {
             // Change status
             _this.updateStatus( 'Initializing...' );
 
+            _this.updateButtons();
+            _this.toggleUi( 'disable' );
+
+            // Start main timer
             timerCallback = function() {
                 // Check server status
                 _this._checkServer();
+                _this.toggleUi( 'enable' );
             };
-
-            // Start main timer
             _this.timerStart( 3000, timerCallback );
+
+
 
 
             return _this;
@@ -139,7 +237,7 @@ if ($_GET[action]) {
 
             return _this;
         },
-        updateCurrent: function() {
+        updateButtons: function() {
             var _this = this;
 
             tplData   = {
@@ -148,13 +246,49 @@ if ($_GET[action]) {
                 artist: _this.opt.requestData.artist,
             };
             tpl       = _.template( _this.opt._buttonsTpl );
-            mtCurrent = tpl(tplData);
-            $( _this.opt._buttonsId ).html( mtCurrent );
+            mtButtons = tpl(tplData);
+            $( _this.opt._buttonsId ).html( mtButtons );
+            
+            $( _this.opt._buttonsId ).off( );
+            $( _this.opt._buttonsId ).on( 'click', 'button', function() {
+                var target = this;
+
+                // Track listener
+
+                if ( $( target ).data( 'action' ) == 'track' ) {
+                    _this.disable( target );
+                    _this.updateStatus( 'Tracking...', {hold: 1} );
+                    $.get( _this.opt._url, {action: 'track'}, function( response ){
+                        if ( response && response.status == 'success' && response.data ) {
+                            console.log( response.data );
+                            _this.updateInfo( response.data );
+
+                        }
+                    }).always(function() {
+                        _this.enable( target );
+                        _this.updateStatus( 'Tracked!', {hold: 0} );
+                    });
+                    
+
+                // Download listener
+                } else if ( $( target ).data( 'action' ) == 'download' ) {
+                    _this.log('Downloading...');
+
+                }
+            });
 
             return _this;
         },
         updateStatus: function( status, options )  {
-            var _this = this;
+            var _this   = this;
+            hold        = (options && options.hold) ? options.hold : '0';
+
+            // Exit if status is holded
+            if ( (options && options.hold != 0) && $( _this.opt._statusId ) && $( _this.opt._statusId ).attr( 'data-hold' ) == 1 ) {
+                return _this;
+            }
+            
+            $( _this.opt._statusId ).attr('data-hold', hold);
 
             tplData   = {
                 status: status,
@@ -203,7 +337,7 @@ if ($_GET[action]) {
 
             _this._serverStatus = 'down';
             // _this.updateStatus( 'Checking server status...' );
-            $.get( _this.opt._url, {action: 'here?'}, function( response ){
+            $.get( _this.opt._url, {action: 'here'}, function( response ){
                 if ( response && response.status == 'success' && response.data.answer == 'yes' ) {
                     _this.updateStatus( 'Server UP', {cls: 'mt-green'} );
                     _this._serverStatus = 'up';
@@ -215,8 +349,29 @@ if ($_GET[action]) {
 
 
 
+        toggleUi: function( mode ) {
+            var _this = this;
+
+            $( _this.opt._buttonsId ).find( 'button' ).each(function() {
+                if ( mode == 'disable' ) {
+                    _this.disable( $( this ) );
+                } else {
+                    _this.enable( $( this ) );
+                }
+            })
+        },
 
 
+        disable: function( target ) {
+            if ( target ) {
+                $( target ).prop('disabled', true);
+            }
+        },
+        enable: function( target ) {
+            if ( target ) {
+                $( target ).prop('disabled', false);
+            }
+        },
 
         log: function( msg ) {
             console.log( msg );
@@ -226,7 +381,7 @@ if ($_GET[action]) {
 
 
 
-    
+    /*
     var parsedData = {
         mtOrigTrack:    'I\'m Not Alone (Deadmau5 Mix)',
         mtTrack:        'I\'m Not Alone (Deadmau5 Mix)',
@@ -279,6 +434,7 @@ if ($_GET[action]) {
         mtAtDir:            '#',
         mtLyricsDir:        '#',
     };
+    */
 
     $(function() {
         var request = {
@@ -290,8 +446,9 @@ if ($_GET[action]) {
         }
         mt.value( 'requestData', request );
         mt.init();
-        mt.updateInfo( parsedData );
-        mt.updateCurrent(  );
+        mt.updateInfo( );
+        // mt.updateInfo( parsedData );
+        // mt.updateButtons(  );
     });
 </script>
 
@@ -385,12 +542,8 @@ $response[links] = array(
     artwork => 'artwork',
     lyrics  => 'lyrics',
 );
-
-
-
-
-dbg($response);
-exit;
+// dbg($response);
+// exit;
 
 
 
@@ -398,36 +551,25 @@ exit;
 
 
 
-$trackData = array(
-    'title'      => 'Hey Now',
-    'album'      => 'If You Wait',
-    'artist'     => 'London Grammar',
-    // 'trackUrl'   => 'http://elisto04d.music.yandex.ru/get-mp3/07bf38af482ec38b2c6dce5f51fa7626/506963ade3b08/34/data-0.12:38452698079:4973504?track-id=14671865&play=false&experiments=%7B%22similarities%22%3A%22default%22%2C%22genreRadio%22%3A%22new-ichwill%22%2C%22newMusic%22%3A%22no%22%2C%22recommendedArtists%22%3A%22ichwill_similar_artists%22%2C%22recommendedTracks%22%3A%22recommended_tracks_by_artist_from_history%22%2C%22recommendedAlbumsOfFavoriteGenre%22%3A%22recent%22%2C%22recommendedSimilarArtists%22%3A%22default%22%2C%22recommendedArtistsWithArtistsFromHistory%22%3A%22default%22%2C%22adv%22%3A%22a%22%2C%22myMusicButton%22%3A%22yes%22%7D&from=web-artist_albums-album-track-fridge&albumId=1606291',
-    'trackUrl'   => 'http://s8.pleer.com/0042febeb87d1dcc6f20cbe7c90ea364ceece84879809d8bf71954cb8b4ad11d994b87332c32ca955f54cc8d246c8e4f4ef8776831de1a588e64975f8710d97a50/cb97e736e8.mp3',
-    'artworkUrl' => 'http://3.avatars.yandex.net/get-music-content/5560c9b4.a.1606291-1/200x200',
-    
-    // 'trackUrl'   => 'http://t1-2.p-cdn.com/access/?version=4&lid=946783457&token=cqf%2Bh%2BdUKV1%2BM4GARZanyUV%2BXk6ZfdmDfSeUE90%2ByDaT%2FaFexRhOhSxZD0qA28G351vbJgiKhv3303dABMMyvwZZSC0sj5MUMUTQujGHkoU29CGoniWCTX9zNILTE7puwclRvXOpA3nDGD1eWpbC0wtEIk6z1onkPn7EFtt2gPXZ7dvyfMZcPKwPF9e2nmzU3MFeS6s4TieSNbbWz1vsgXjjwlMQQFZ0jUOPbHpbD3h7h9Ih55bRksx1BD16Kab3Zb89Xcr%2BSRbnGl41NsbhhbJiD8uYI92pOoliu9KNK5XuyE1ffDJqHqdDHLlONo1XAoJIYPMhmK1ht9GHymUsZJHv8U0jR7ZZ%2FRl17DSineIzMB0%2FaIfCaEj0ms8cAjIS',
-    // 'artworkUrl' => 'http://cont-dc6-2.pandora.com/images/public/amz/2/6/1/5/800015162_500W_500H.jpg',
-    // 'artworkUrl' => 'http://www.queness.com/resources/images/png/apple_ex.png',
-    // 'artworkUrl' => 'http://www.newyorker.com/wp-content/uploads/2012/12/Gif-1.gif',
 
-    // 'title'      => 'Confusion (Instrumental)',
-    // 'title'      => 'Confusion',
-    // 'artist'     => 'New Order',
 
-    
-);
+$options    = array();
+$musicTug   = new MusicTug($trackData, $options);
+$l          = $musicTug->getTagsStream('all');
+// $l          = $musicTug->getLyricsStream();
+// $l          = $musicTug->getArtworkStream();
+// $l          = $musicTug->getTrackStream();
 
-$options = array();
+// dbg ($musicTug->getPrivate('_title') );
+dbg($l, 0);
+dbg($musicTug);
 
 // $fi = new finfo(FILEINFO_MIME,'/usr/share/file/magic');
 // $mime_type = $fi->buffer(file_get_contents($file));
 
 
-$musicTug = new MusicTug($trackData, $options);
 
 // $musicTug->init();
-
 // $l = $musicTug->getTagsStream();
 // $l = $musicTug->getLyricsStream();
 // $l = $musicTug->getArtworkStream();
@@ -435,15 +577,3 @@ $musicTug = new MusicTug($trackData, $options);
 // $l[file] = null;
 // dbg($l);
 
-if ($_GET[action] == 'track') {
-
-
-
-} elseif ($_GET[action] == 'here?') {
-    $jsonAnswer = array(answer => 'yes');
-    MusicTugHelper::jsonResponse('success', $jsonAnswer);
-}
-
-// $b = new MusicTugApi();
-// $b->route('here?');
-// dbg(MusicTugHelper::getConfig());

@@ -88,6 +88,16 @@ class MusicTug
         // dbg($this);
     }
 
+    /**
+     * Get private value
+     * @param string $name Value name
+     * @return One of $this values
+     */
+    function getPrivate ($name)
+    {
+        return $this->$name;
+    }
+
 
     /**
      * Init
@@ -334,7 +344,7 @@ class MusicTug
 
         if ($lyricsPage) {
             // TODO: make parsing when links are displayed instead of lyrics
-            $lyricsHeader = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, 'class="WikiaPageHeader"'));
+            $lyricsHeader = substr_replace($lyricsPage, null, 0, strpos($lyricsPage, 'header-title'));
             $lyricsHeader = substr_replace($lyricsHeader, null, 0, strpos($lyricsHeader, "<h1>") + strlen('<h1>'));
             $lyricsHeader = substr_replace($lyricsHeader, null, strpos($lyricsHeader, "</h1>"));
             $lyricsHeader = preg_replace("~\s?lyrics$~i", null, $lyricsHeader);
@@ -859,9 +869,10 @@ trait tagsStreamTrait
 
     /**
      * Return $this->_tmp[tagsStream] with the bigest "similarIndex"
+     * @param string $mode optional ['best'|'all'] - return tags with 'best' similar or 'all' parsed tags
      * @return array One oF $this->_tmp[tagsStream][] items with best "similarIndex"
      */
-    function getTagsStream()
+    function getTagsStream($mode = 'best')
     {
         MusicTugHelper::log("Going to get tags stream");
         
@@ -873,18 +884,26 @@ trait tagsStreamTrait
             $this->_storeTagsStream();
         }
 
-        foreach ($this->_tmp[tagsStream] as $key => $tags) {
-            if ($tags[similarIndex] >= $similarIndex AND $tags[similarIndex] >= $this->_config[similarMin]) {
-                $streamIndex  = $key;
-                $similarIndex = $tags[similarIndex];
+        if ($mode == 'all') {
+            return $this->_tmp[tagsStream];
+        
+        } elseif ($mode == 'best') {
+
+            foreach ($this->_tmp[tagsStream] as $key => $tags) {
+                if ($tags[similarIndex] >= $similarIndex AND $tags[similarIndex] >= $this->_config[similarMin]) {
+                    $streamIndex  = $key;
+                    $similarIndex = $tags[similarIndex];
+                }
             }
+
+            if ($streamIndex !== null) {
+                $tagsStream = $this->_tmp[tagsStream][$streamIndex];
+            }
+
+            return $tagsStream;
         }
 
-        if ($streamIndex !== null) {
-            $tagsStream = $this->_tmp[tagsStream][$streamIndex];
-        }
-
-        return $tagsStream;
+        return false;
     }
 
 
